@@ -188,7 +188,7 @@ func newCmdSuspensionCreate() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&userID, "user-id", "", "User ID (required)")
-	cmd.MarkFlagRequired("user-id")
+	_ = cmd.MarkFlagRequired("user-id")
 	cmd.Flags().StringVar(&reason, "reason", "", "Reason")
 	cmd.Flags().StringVar(&note, "note", "", "Note")
 	cmd.Flags().StringVar(&expiresAt, "expires-at", "", "Expiry date (ISO 8601)")
@@ -285,7 +285,7 @@ func newCmdCommentModerate() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&status, "status", "", "Status (active, softbanned, deleted)")
-	cmd.MarkFlagRequired("status")
+	_ = cmd.MarkFlagRequired("status")
 	cmd.Flags().StringVar(&note, "note", "", "Note")
 	return cmd
 }

@@ -331,7 +331,7 @@ func newCmdReact() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&reactionType, "type", "", "Reaction type/emoji (required)")
-	cmd.MarkFlagRequired("type")
+	_ = cmd.MarkFlagRequired("type")
 	cmd.Flags().BoolVar(&remove, "remove", false, "Remove reaction")
 	return cmd
 }

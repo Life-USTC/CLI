@@ -50,7 +50,7 @@ func discoverOAuthMetadata(server string) (map[string]any, error) {
 		if err != nil {
 			continue
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode == 200 {
 			var meta map[string]any
 			if err := json.NewDecoder(resp.Body).Decode(&meta); err != nil {
@@ -77,13 +77,15 @@ func registerClient(endpoint, redirectURI string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
 		b, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("client registration failed (%d): %s", resp.StatusCode, string(b))
 	}
 	var result map[string]any
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode client registration response: %w", err)
+	}
 	return result, nil
 }
 
@@ -165,15 +167,15 @@ func Login(server string) (*config.Credential, error) {
 		q := r.URL.Query()
 		if e := q.Get("error"); e != "" {
 			ch <- callbackResult{err: e}
-			w.Write([]byte("<html><body><h2>Authentication failed</h2><p>You can close this tab.</p></body></html>"))
+			_, _ = w.Write([]byte("<html><body><h2>Authentication failed</h2><p>You can close this tab.</p></body></html>"))
 			return
 		}
 		ch <- callbackResult{code: q.Get("code"), state: q.Get("state")}
-		w.Write([]byte("<html><body><h2>Authentication successful!</h2><p>You can close this tab and return to the terminal.</p></body></html>"))
+		_, _ = w.Write([]byte("<html><body><h2>Authentication successful!</h2><p>You can close this tab and return to the terminal.</p></body></html>"))
 	})
 	srv := &http.Server{Handler: mux}
-	go srv.Serve(listener)
-	defer srv.Shutdown(context.Background())
+	go func() { _ = srv.Serve(listener) }()
+	defer func() { _ = srv.Shutdown(context.Background()) }()
 
 	// Open browser
 	fmt.Println()
@@ -214,7 +216,7 @@ func Login(server string) (*config.Credential, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tokenResp.Body.Close()
+	defer func() { _ = tokenResp.Body.Close() }()
 
 	tokenBody, _ := io.ReadAll(tokenResp.Body)
 	if tokenResp.StatusCode != 200 {
@@ -222,7 +224,9 @@ func Login(server string) (*config.Credential, error) {
 	}
 
 	var tokens map[string]any
-	json.Unmarshal(tokenBody, &tokens)
+	if err := json.Unmarshal(tokenBody, &tokens); err != nil {
+		return nil, fmt.Errorf("failed to decode token response: %w", err)
+	}
 
 	now := float64(time.Now().Unix())
 	expiresIn := 3600.0
@@ -266,7 +270,7 @@ func RefreshToken(server string, cred *config.Credential) (*config.Credential, e
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		b, _ := io.ReadAll(resp.Body)
@@ -274,7 +278,9 @@ func RefreshToken(server string, cred *config.Credential) (*config.Credential, e
 	}
 
 	var tokens map[string]any
-	json.NewDecoder(resp.Body).Decode(&tokens)
+	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+		return nil, fmt.Errorf("failed to decode refresh response: %w", err)
+	}
 
 	now := float64(time.Now().Unix())
 	expiresIn := 3600.0

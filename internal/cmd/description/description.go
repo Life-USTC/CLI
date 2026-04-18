@@ -74,8 +74,8 @@ func newCmdGet() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&targetType, "target-type", "", "Target type (section, course, teacher, homework)")
 	cmd.Flags().StringVar(&targetID, "target-id", "", "Target ID")
-	cmd.MarkFlagRequired("target-type")
-	cmd.MarkFlagRequired("target-id")
+	_ = cmd.MarkFlagRequired("target-type")
+	_ = cmd.MarkFlagRequired("target-id")
 	return cmd
 }
 
@@ -109,8 +109,8 @@ func newCmdSet() *cobra.Command {
 	cmd.Flags().StringVar(&targetType, "target-type", "", "Target type")
 	cmd.Flags().StringVar(&targetID, "target-id", "", "Target ID")
 	cmd.Flags().StringVarP(&content, "content", "c", "", "Description content (Markdown)")
-	cmd.MarkFlagRequired("target-type")
-	cmd.MarkFlagRequired("target-id")
-	cmd.MarkFlagRequired("content")
+	_ = cmd.MarkFlagRequired("target-type")
+	_ = cmd.MarkFlagRequired("target-id")
+	_ = cmd.MarkFlagRequired("content")
 	return cmd
 }

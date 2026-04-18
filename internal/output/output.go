@@ -62,7 +62,7 @@ func TableTo(w io.Writer, rows []map[string]any, cols []Column, emptyMsg string)
 	for i, c := range cols {
 		hdrs[i] = color.New(color.Bold, color.Faint).Sprint(strings.ToUpper(c.Header))
 	}
-	fmt.Fprintln(tw, strings.Join(hdrs, "\t"))
+	_, _ = fmt.Fprintln(tw, strings.Join(hdrs, "\t"))
 
 	// Rows
 	for _, row := range rows {
@@ -70,9 +70,9 @@ func TableTo(w io.Writer, rows []map[string]any, cols []Column, emptyMsg string)
 		for i, c := range cols {
 			vals[i] = FormatCell(Resolve(row, c.Key))
 		}
-		fmt.Fprintln(tw, strings.Join(vals, "\t"))
+		_, _ = fmt.Fprintln(tw, strings.Join(vals, "\t"))
 	}
-	tw.Flush()
+	_ = tw.Flush()
 }
 
 // --- Key-value output ---

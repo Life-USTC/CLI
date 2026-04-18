@@ -80,7 +80,7 @@ func newCmdFile() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			stat, err := f.Stat()
 			if err != nil {
@@ -126,7 +126,7 @@ func newCmdFile() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode >= 400 {
 				return fmt.Errorf("S3 upload failed with status %d", resp.StatusCode)
 			}
@@ -165,7 +165,7 @@ func newCmdRename() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&filename, "filename", "", "New filename (required)")
-	cmd.MarkFlagRequired("filename")
+	_ = cmd.MarkFlagRequired("filename")
 	return cmd
 }
 
@@ -215,7 +215,7 @@ func newCmdDownload() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			data, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err
@@ -226,7 +226,7 @@ func newCmdDownload() *cobra.Command {
 				}
 				output.Success(fmt.Sprintf("Saved to %s", outFile))
 			} else {
-				os.Stdout.Write(data)
+				_, _ = os.Stdout.Write(data)
 			}
 			return nil
 		},

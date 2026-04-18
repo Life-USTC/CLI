@@ -81,14 +81,14 @@ func atomicWriteJSON(path string, data any, mode os.FileMode) error {
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(data); err != nil {
-		f.Close()
-		os.Remove(tmpName)
+		_ = f.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
-	f.Close()
+	_ = f.Close()
 
 	if err := os.Chmod(tmpName, mode); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return err
 	}
 	return os.Rename(tmpName, path)

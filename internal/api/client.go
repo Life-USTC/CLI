@@ -103,7 +103,7 @@ func (c *Client) do(method, path string, params url.Values, body io.Reader, cont
 
 	// Retry once on 401
 	if resp.StatusCode == 401 && c.Cred != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		newCred, err := auth.RefreshToken(c.Server, c.Cred)
 		if err == nil && newCred != nil {
 			c.Cred = newCred
@@ -112,7 +112,7 @@ func (c *Client) do(method, path string, params url.Values, body io.Reader, cont
 			// Re-read body if possible
 			if body != nil {
 				if seeker, ok := body.(io.ReadSeeker); ok {
-					seeker.Seek(0, io.SeekStart)
+					_, _ = seeker.Seek(0, io.SeekStart)
 				}
 			}
 
@@ -129,7 +129,7 @@ func (c *Client) do(method, path string, params url.Values, body io.Reader, cont
 			}
 		}
 		if resp.StatusCode == 401 {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil, fmt.Errorf("session expired. Please run `life-ustc auth login` again")
 		}
 	}
@@ -153,7 +153,7 @@ func (c *Client) request(method, path string, params url.Values, jsonBody any) (
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -227,7 +227,7 @@ func (c *Client) PostForm(endpoint string, data url.Values) (map[string]any, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
