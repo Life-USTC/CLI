@@ -24,12 +24,20 @@ func NewCmdAuth() *cobra.Command {
 }
 
 func newCmdLogin() *cobra.Command {
-	return &cobra.Command{
+	var useDeviceCode bool
+
+	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Log in via browser (OAuth2 + PKCE)",
+		Short: "Log in via browser (OAuth2 + PKCE) or device code flow",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			server := cmdutil.ServerFromCmd(cmd)
-			cred, err := auth.Login(server)
+			var cred *config.Credential
+			var err error
+			if useDeviceCode {
+				cred, err = auth.LoginDeviceCode(server)
+			} else {
+				cred, err = auth.Login(server)
+			}
 			if err != nil {
 				return err
 			}
@@ -40,6 +48,10 @@ func newCmdLogin() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&useDeviceCode, "device", false, "Use device code flow (no browser redirect needed)")
+
+	return cmd
 }
 
 func newCmdLogout() *cobra.Command {
