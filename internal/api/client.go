@@ -13,6 +13,7 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/auth"
 	"github.com/Life-USTC/CLI/internal/config"
+	"github.com/Life-USTC/CLI/internal/output"
 )
 
 // Client wraps net/http with automatic auth header injection and token refresh.
@@ -85,6 +86,9 @@ func (c *Client) do(method, path string, params url.Values, body io.Reader, cont
 		u += "?" + params.Encode()
 	}
 
+	output.VerboseF("→ %s %s", method, u)
+	start := time.Now()
+
 	req, err := http.NewRequest(method, u, body)
 	if err != nil {
 		return nil, err
@@ -98,8 +102,11 @@ func (c *Client) do(method, path string, params url.Values, body io.Reader, cont
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
+		output.VerboseF("← error: %s (%dms)", err, time.Since(start).Milliseconds())
 		return nil, err
 	}
+
+	output.VerboseF("← %d %s (%dms)", resp.StatusCode, http.StatusText(resp.StatusCode), time.Since(start).Milliseconds())
 
 	// Retry once on 401
 	if resp.StatusCode == 401 && c.Cred != nil {

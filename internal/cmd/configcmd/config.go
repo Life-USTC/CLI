@@ -11,8 +11,19 @@ import (
 
 func NewCmdConfig() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "config <command>",
+		Use:   "config [command]",
 		Short: "Manage CLI configuration",
+		Long:  "View and update CLI configuration such as the default server URL.",
+		Example: `  # Show the current server
+  life-ustc config
+
+  # Set a new default server
+  life-ustc config set-server https://example.com`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println(config.GetDefaultServer())
+			return nil
+		},
 	}
 	cmd.AddCommand(newCmdSetServer())
 	cmd.AddCommand(newCmdGetServer())

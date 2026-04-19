@@ -19,6 +19,22 @@ func ServerFromCmd(cmd *cobra.Command) string {
 
 func Itoa(i int) string { return fmt.Sprintf("%d", i) }
 
+// AddListFlags registers the standard --limit/-L and --page/-p flags on a command.
+func AddListFlags(cmd *cobra.Command, page, limit *int) {
+	cmd.Flags().IntVarP(limit, "limit", "L", 0, "Maximum number of results to fetch")
+	cmd.Flags().IntVarP(page, "page", "p", 0, "Page number for paginated results")
+}
+
+// ApplyListParams sets page and limit on a url.Values-like map.
+func ApplyListParams(params interface{ Set(string, string) }, page, limit int) {
+	if page > 0 {
+		params.Set("page", Itoa(page))
+	}
+	if limit > 0 {
+		params.Set("limit", Itoa(limit))
+	}
+}
+
 // ExtractList pulls rows and pagination info from a standard API list response.
 func ExtractList(data any, listKeys ...string) (raw any, rows []map[string]any, total int, page int) {
 	raw = data

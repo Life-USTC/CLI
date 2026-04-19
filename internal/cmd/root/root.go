@@ -24,23 +24,53 @@ import (
 
 var version = "dev"
 
+// Command group IDs
+const (
+	groupCore    = "core"
+	groupPersonal = "personal"
+	groupBrowse  = "browse"
+	groupRef     = "reference"
+	groupAdmin   = "admin"
+)
+
 func NewCmdRoot() *cobra.Command {
 	var (
 		server  string
 		format  string
 		noColor bool
+		jq      string
+		verbose bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "life-ustc <command> <subcommand> [flags]",
 		Short: "Life@USTC — command-line client for the USTC campus platform",
-		Long:  "Work seamlessly with the USTC campus platform from the command line.",
+		Long: `Work seamlessly with the USTC campus platform from the command line.
+
+Browse courses, sections, and teachers. Manage your todos, homework,
+calendar, and uploads. All output supports --jq for scripting.`,
+		Example: `  # Show your profile
+  life-ustc me
+
+  # List sections and filter with jq
+  life-ustc section list --limit 5 --jq '.[].code'
+
+  # Check your pending todos
+  life-ustc me todo list --pending
+
+  # View a course and its sections
+  life-ustc course view <course-id>
+
+  # Generate shell completions
+  life-ustc completion bash`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if server == "" {
 				server = config.GetDefaultServer()
 			}
 			output.Current.Format = format
 			output.Current.NoColor = noColor
+			output.Current.JQ = jq
+			output.Current.Verbose = verbose
 			if noColor {
 				color.NoColor = true
 			}
@@ -52,23 +82,61 @@ func NewCmdRoot() *cobra.Command {
 
 	cmd.SetVersionTemplate("life-ustc version {{.Version}}\n")
 
+	// Global flags
 	cmd.PersistentFlags().StringVar(&server, "server", "", "Server URL (default: life-ustc.tiankaima.dev, env: LIFE_USTC_SERVER)")
 	cmd.PersistentFlags().StringVar(&format, "format", "table", "Output format: table, json")
 	cmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
+	cmd.PersistentFlags().StringVar(&jq, "jq", "", "Filter JSON output with a jq expression")
+	cmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Show verbose output (API requests, timing)")
 
-	// Register all commands
-	cmd.AddCommand(authcmd.NewCmdAuth())
-	cmd.AddCommand(me.NewCmdMe())
-	cmd.AddCommand(semester.NewCmdSemester())
-	cmd.AddCommand(course.NewCmdCourse())
-	cmd.AddCommand(section.NewCmdSection())
-	cmd.AddCommand(teacher.NewCmdTeacher())
-	cmd.AddCommand(schedule.NewCmdSchedule())
-	cmd.AddCommand(bus.NewCmdBus())
-	cmd.AddCommand(metadata.NewCmdMetadata())
-	cmd.AddCommand(admin.NewCmdAdmin())
-	cmd.AddCommand(configcmd.NewCmdConfig())
-	cmd.AddCommand(newCmdCompletion())
+	// Command groups
+	cmd.AddGroup(
+		&cobra.Group{ID: groupCore, Title: "Core commands:"},
+		&cobra.Group{ID: groupPersonal, Title: "Personal:"},
+		&cobra.Group{ID: groupBrowse, Title: "Browse:"},
+		&cobra.Group{ID: groupRef, Title: "Reference:"},
+		&cobra.Group{ID: groupAdmin, Title: "Administration:"},
+	)
+
+	// Core
+	authCmd := authcmd.NewCmdAuth()
+	authCmd.GroupID = groupCore
+	configCmd := configcmd.NewCmdConfig()
+	configCmd.GroupID = groupCore
+	completionCmd := newCmdCompletion()
+	completionCmd.GroupID = groupCore
+
+	// Personal
+	meCmd := me.NewCmdMe()
+	meCmd.GroupID = groupPersonal
+
+	// Browse
+	courseCmd := course.NewCmdCourse()
+	courseCmd.GroupID = groupBrowse
+	sectionCmd := section.NewCmdSection()
+	sectionCmd.GroupID = groupBrowse
+	teacherCmd := teacher.NewCmdTeacher()
+	teacherCmd.GroupID = groupBrowse
+	semesterCmd := semester.NewCmdSemester()
+	semesterCmd.GroupID = groupBrowse
+	scheduleCmd := schedule.NewCmdSchedule()
+	scheduleCmd.GroupID = groupBrowse
+	busCmd := bus.NewCmdBus()
+	busCmd.GroupID = groupBrowse
+
+	// Reference
+	metadataCmd := metadata.NewCmdMetadata()
+	metadataCmd.GroupID = groupRef
+
+	// Admin
+	adminCmd := admin.NewCmdAdmin()
+	adminCmd.GroupID = groupAdmin
+
+	cmd.AddCommand(authCmd, configCmd, completionCmd)
+	cmd.AddCommand(meCmd)
+	cmd.AddCommand(courseCmd, sectionCmd, teacherCmd, semesterCmd, scheduleCmd, busCmd)
+	cmd.AddCommand(metadataCmd)
+	cmd.AddCommand(adminCmd)
 
 	return cmd
 }

@@ -17,7 +17,15 @@ func NewCmdMe() *cobra.Command {
 		Use:   "me [command]",
 		Short: "Your personal hub",
 		Long:  "Show your profile or manage personal data (todos, homework, calendar, uploads).",
-		Args:  cobra.NoArgs,
+		Example: `  # Show your profile
+  life-ustc me
+
+  # List your pending homeworks
+  life-ustc me homework list --pending
+
+  # Manage todos
+  life-ustc me todo list --done`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {

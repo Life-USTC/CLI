@@ -14,10 +14,61 @@ import (
 )
 
 func NewCmdBus() *cobra.Command {
+	var (
+		origin, destination, dayType, now string
+		limit                             int
+	)
 	cmd := &cobra.Command{
-		Use:   "bus <command>",
+		Use:   "bus [command]",
 		Short: "Shuttle bus schedules",
+		Long:  "Query shuttle bus schedules between campuses, and manage your bus preferences.",
+		Example: `  # Query upcoming buses
+  life-ustc bus
+
+  # Filter by route
+  life-ustc bus query --from east --to west
+
+  # Show saved preferences
+  life-ustc bus preferences`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			if err != nil {
+				return err
+			}
+			params := url.Values{}
+			if origin != "" {
+				params.Set("from", origin)
+			}
+			if destination != "" {
+				params.Set("to", destination)
+			}
+			if dayType != "" {
+				params.Set("dayType", dayType)
+			}
+			if now != "" {
+				params.Set("now", now)
+			}
+			if limit > 0 {
+				params.Set("limit", cmdutil.Itoa(limit))
+			}
+			data, err := c.Get("/api/bus", params)
+			if err != nil {
+				return err
+			}
+			if output.IsJSON() {
+				output.JSON(data)
+				return nil
+			}
+			renderBus(cmdutil.AsMap(data))
+			return nil
+		},
 	}
+	cmd.Flags().StringVar(&origin, "from", "", "Origin campus")
+	cmd.Flags().StringVar(&destination, "to", "", "Destination campus")
+	cmd.Flags().StringVar(&dayType, "day-type", "", "Day type filter")
+	cmd.Flags().StringVar(&now, "now", "", "Override current time (ISO 8601)")
+	cmd.Flags().IntVar(&limit, "limit", 0, "Max trips")
 	cmd.AddCommand(newCmdQuery())
 	cmd.AddCommand(newCmdPreferences())
 	cmd.AddCommand(newCmdSetPreferences())
@@ -30,8 +81,14 @@ func newCmdQuery() *cobra.Command {
 		limit                             int
 	)
 	cmd := &cobra.Command{
-		Use:   "query",
-		Short: "Query shuttle bus schedules",
+		Use:     "query",
+		Aliases: []string{"q"},
+		Short:   "Query shuttle bus schedules",
+		Example: `  # Show all upcoming buses
+  life-ustc bus query
+
+  # Filter by origin and destination
+  life-ustc bus query --from east --to west`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {

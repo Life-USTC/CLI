@@ -47,6 +47,15 @@ func NewCmdSectionHomework() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "homework <command>",
 		Short: "Manage section homeworks",
+		Long:  "List, create, update, and delete homeworks for a course section.",
+		Example: `  # List homeworks for a section
+  life-ustc section homework list <section-id>
+
+  # Create a homework
+  life-ustc section homework create <section-id> --title "Problem Set 1"
+
+  # Delete a homework
+  life-ustc section homework delete <homework-id> -y`,
 	}
 	cmd.AddCommand(newCmdSectionList())
 	cmd.AddCommand(newCmdSectionCreate())
@@ -56,11 +65,15 @@ func NewCmdSectionHomework() *cobra.Command {
 }
 
 func newCmdSectionList() *cobra.Command {
-	var includeDeleted bool
+	var (
+		includeDeleted bool
+		page, limit    int
+	)
 	cmd := &cobra.Command{
-		Use:   "list <section-id>",
-		Short: "List homeworks for a section",
-		Args:  cobra.ExactArgs(1),
+		Use:     "list <section-id>",
+		Aliases: []string{"ls"},
+		Short:   "List homeworks for a section",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
@@ -70,12 +83,14 @@ func newCmdSectionList() *cobra.Command {
 			if includeDeleted {
 				params.Set("includeDeleted", "true")
 			}
+			cmdutil.ApplyListParams(params, page, limit)
 			data, err := c.Get("/api/homeworks", params)
 			if err != nil {
 				return err
 			}
 			_, rows, total, pg := cmdutil.ExtractList(data)
 			output.OutputList(data, rows, []output.Column{
+				{Header: "ID", Key: "id"},
 				{Header: "Title", Key: "title"},
 				{Header: "Due", Key: "submissionDueAt"},
 				{Header: "Major", Key: "isMajor"},
@@ -84,6 +99,7 @@ func newCmdSectionList() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&includeDeleted, "include-deleted", false, "Include deleted")
+	cmdutil.AddListFlags(cmd, &page, &limit)
 	return cmd
 }
 
@@ -93,9 +109,10 @@ func newCmdSectionCreate() *cobra.Command {
 		major                                                    bool
 	)
 	cmd := &cobra.Command{
-		Use:   "create <section-id>",
-		Short: "Create a homework for a section",
-		Args:  cobra.ExactArgs(1),
+		Use:     "create <section-id>",
+		Aliases: []string{"new"},
+		Short:   "Create a homework for a section",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sectionID := args[0]
 			if title == "" {
@@ -149,40 +166,83 @@ func newCmdSectionCreate() *cobra.Command {
 	return cmd
 }
 
+type myHomeworkListOpts struct {
+	done   bool
+	pending bool
+	before string
+	after  string
+	page   int
+	limit  int
+}
+
 // NewCmdMyHomework returns personal homework commands (list + complete).
 // Running without a subcommand lists your homeworks.
 func NewCmdMyHomework() *cobra.Command {
+	var opts myHomeworkListOpts
 	cmd := &cobra.Command{
 		Use:   "homework [command]",
 		Short: "View and manage your homeworks",
-		Args:  cobra.NoArgs,
+		Long:  "List your assigned homeworks and mark them as complete.",
+		Example: `  # List all your homeworks
+  life-ustc me homework
+
+  # Show only pending homeworks
+  life-ustc me homework list --pending
+
+  # Show homeworks due before a date
+  life-ustc me homework list --before 2025-06-01
+
+  # Mark a homework as done
+  life-ustc me homework complete <homework-id>`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runMyHomeworkList(cmd)
+			return runMyHomeworkList(cmd, opts)
 		},
 	}
 	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List your homeworks",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List your homeworks",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runMyHomeworkList(cmd)
+			return runMyHomeworkList(cmd, opts)
 		},
 	}
+	listCmd.Flags().BoolVar(&opts.done, "done", false, "Show only completed homeworks")
+	listCmd.Flags().BoolVar(&opts.pending, "pending", false, "Show only pending homeworks")
+	listCmd.Flags().StringVar(&opts.before, "before", "", "Show homeworks due before this date (ISO 8601)")
+	listCmd.Flags().StringVar(&opts.after, "after", "", "Show homeworks due after this date (ISO 8601)")
+	cmdutil.AddListFlags(listCmd, &opts.page, &opts.limit)
 	cmd.AddCommand(listCmd)
 	cmd.AddCommand(newCmdComplete())
 	return cmd
 }
 
-func runMyHomeworkList(cmd *cobra.Command) error {
+func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 	if err != nil {
 		return err
 	}
-	data, err := c.Get("/api/homeworks", nil)
+	params := url.Values{}
+	if opts.done {
+		params.Set("isCompleted", "true")
+	}
+	if opts.pending {
+		params.Set("isCompleted", "false")
+	}
+	if opts.before != "" {
+		params.Set("dueBefore", opts.before)
+	}
+	if opts.after != "" {
+		params.Set("dueAfter", opts.after)
+	}
+	cmdutil.ApplyListParams(params, opts.page, opts.limit)
+	data, err := c.Get("/api/homeworks", params)
 	if err != nil {
 		return err
 	}
 	_, rows, total, pg := cmdutil.ExtractList(data)
 	output.OutputList(data, rows, []output.Column{
+		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
 		{Header: "Section", Key: "section.code"},
 		{Header: "Due", Key: "submissionDueAt"},
@@ -196,10 +256,12 @@ func newCmdList() *cobra.Command {
 	var (
 		sectionID      string
 		includeDeleted bool
+		page, limit    int
 	)
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List homeworks for a section",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List homeworks for a section",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if sectionID == "" {
 				return fmt.Errorf("--section-id is required")
@@ -212,12 +274,14 @@ func newCmdList() *cobra.Command {
 			if includeDeleted {
 				params.Set("includeDeleted", "true")
 			}
+			cmdutil.ApplyListParams(params, page, limit)
 			data, err := c.Get("/api/homeworks", params)
 			if err != nil {
 				return err
 			}
 			_, rows, total, pg := cmdutil.ExtractList(data)
 			output.OutputList(data, rows, []output.Column{
+				{Header: "ID", Key: "id"},
 				{Header: "Title", Key: "title"},
 				{Header: "Due", Key: "submissionDueAt"},
 				{Header: "Major", Key: "isMajor"},
@@ -227,6 +291,7 @@ func newCmdList() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&sectionID, "section-id", "", "Section ID (required)")
 	cmd.Flags().BoolVar(&includeDeleted, "include-deleted", false, "Include deleted")
+	cmdutil.AddListFlags(cmd, &page, &limit)
 	return cmd
 }
 
@@ -236,9 +301,10 @@ func newCmdCreate() *cobra.Command {
 		major                                                               bool
 	)
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a homework",
-		Long:  "Create a homework. Prompts interactively when --section-id/--title are omitted.",
+		Use:     "create",
+		Aliases: []string{"new"},
+		Short:   "Create a homework",
+		Long:    "Create a homework. Prompts interactively when --section-id/--title are omitted.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if sectionID == "" || title == "" {
 				if !isInteractive() {
@@ -331,7 +397,7 @@ func newCmdUpdate() *cobra.Command {
 				body["isMajor"] = false
 			}
 			if len(body) == 0 {
-				return fmt.Errorf("nothing to update")
+				return fmt.Errorf("nothing to update — specify at least one flag")
 			}
 			_, err = c.Patch(fmt.Sprintf("/api/homeworks/%s", args[0]), body)
 			if err != nil {
@@ -353,15 +419,16 @@ func newCmdUpdate() *cobra.Command {
 func newCmdDelete() *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:   "delete <homework-id>",
-		Short: "Delete a homework (soft delete)",
-		Args:  cobra.ExactArgs(1),
+		Use:     "delete <homework-id>",
+		Aliases: []string{"rm"},
+		Short:   "Delete a homework (soft delete)",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
 				fmt.Print("Delete this homework? (y/N) ")
 				s := bufio.NewScanner(os.Stdin)
 				if s.Scan() && strings.ToLower(strings.TrimSpace(s.Text())) != "y" {
-					fmt.Println("Cancelled.")
+					output.Warning("Cancelled.")
 					return nil
 				}
 			}
@@ -377,7 +444,7 @@ func newCmdDelete() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&yes, "yes", false, "Skip confirmation")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation")
 	return cmd
 }
 

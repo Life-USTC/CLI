@@ -13,14 +13,60 @@ import (
 
 func NewCmdAuth() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "auth <command>",
+		Use:   "auth [command]",
 		Short: "Authenticate with a Life@USTC server",
+		Long:  "Log in, log out, and inspect authentication status for a Life@USTC server.",
+		Example: `  # Check auth status
+  life-ustc auth
+
+  # Log in via browser
+  life-ustc auth login
+
+  # Print the current access token
+  life-ustc auth token`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAuthStatus(cmd)
+		},
 	}
 	cmd.AddCommand(newCmdLogin())
 	cmd.AddCommand(newCmdLogout())
 	cmd.AddCommand(newCmdStatus())
 	cmd.AddCommand(newCmdToken())
 	return cmd
+}
+
+func runAuthStatus(cmd *cobra.Command) error {
+	server := cmdutil.ServerFromCmd(cmd)
+	cred, err := config.LoadCredentials(server)
+	if err != nil {
+		return err
+	}
+	if output.IsJSON() {
+		data := map[string]any{"server": server, "authenticated": cred != nil}
+		if cred != nil {
+			data["expired"] = config.IsTokenExpired(cred)
+			data["scope"] = cred.Scope
+			data["hasRefreshToken"] = cred.RefreshToken != ""
+		}
+		output.JSON(data)
+		return nil
+	}
+	if cred == nil {
+		output.Warning(fmt.Sprintf("Not logged in to %s", server))
+		return nil
+	}
+	status := "active"
+	if config.IsTokenExpired(cred) {
+		status = "expired"
+	}
+	output.KVWithTitle([]output.KVPair{
+		{Key: "Server", Value: server},
+		{Key: "Status", Value: status},
+		{Key: "Scope", Value: cred.Scope},
+		{Key: "Refresh token", Value: cred.RefreshToken != ""},
+	}, "Auth status")
+	return nil
 }
 
 func newCmdLogin() *cobra.Command {
@@ -79,36 +125,7 @@ func newCmdStatus() *cobra.Command {
 		Use:   "status",
 		Short: "Show authentication status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			server := cmdutil.ServerFromCmd(cmd)
-			cred, err := config.LoadCredentials(server)
-			if err != nil {
-				return err
-			}
-			if output.IsJSON() {
-				data := map[string]any{"server": server, "authenticated": cred != nil}
-				if cred != nil {
-					data["expired"] = config.IsTokenExpired(cred)
-					data["scope"] = cred.Scope
-					data["hasRefreshToken"] = cred.RefreshToken != ""
-				}
-				output.JSON(data)
-				return nil
-			}
-			if cred == nil {
-				output.Warning(fmt.Sprintf("Not logged in to %s", server))
-				return nil
-			}
-			status := "active"
-			if config.IsTokenExpired(cred) {
-				status = "expired"
-			}
-			output.KVWithTitle([]output.KVPair{
-				{Key: "Server", Value: server},
-				{Key: "Status", Value: status},
-				{Key: "Scope", Value: cred.Scope},
-				{Key: "Refresh token", Value: cred.RefreshToken != ""},
-			}, "Auth status")
-			return nil
+			return runAuthStatus(cmd)
 		},
 	}
 }

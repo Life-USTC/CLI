@@ -32,6 +32,17 @@ func NewCmdMetadata() *cobra.Command {
 	return &cobra.Command{
 		Use:   "metadata",
 		Short: "Show platform metadata dictionaries (campuses, categories, ...)",
+		Long: `Show platform metadata dictionaries used throughout the system.
+
+Displays reference data such as campuses, education levels, course categories,
+class types, gradations, course types, exam modes, teaching languages, and
+course classifies. These values are used as filters and identifiers in other
+commands.`,
+		Example: `  # Show all metadata tables
+  life-ustc metadata
+
+  # Output as JSON for scripting
+  life-ustc metadata --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {

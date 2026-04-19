@@ -34,9 +34,10 @@ func NewCmdDescriptionFor(targetType string) *cobra.Command {
 
 func newCmdGetFor(targetType string) *cobra.Command {
 	return &cobra.Command{
-		Use:   fmt.Sprintf("get <%s-id>", targetType),
-		Short: fmt.Sprintf("Get description for a %s", targetType),
-		Args:  cobra.ExactArgs(1),
+		Use:     fmt.Sprintf("get <%s-id>", targetType),
+		Aliases: []string{"show"},
+		Short:   fmt.Sprintf("Get description for a %s", targetType),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
@@ -122,8 +123,9 @@ func newCmdSetFor(targetType string) *cobra.Command {
 func newCmdGet() *cobra.Command {
 	var targetType, targetID string
 	cmd := &cobra.Command{
-		Use:   "get",
-		Short: "Get description for a resource",
+		Use:     "get",
+		Aliases: []string{"show"},
+		Short:   "Get description for a resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
@@ -164,6 +166,7 @@ func newCmdGet() *cobra.Command {
 					}
 				}
 				output.Table(rows, []output.Column{
+					{Header: "ID", Key: "id"},
 					{Header: "Updated", Key: "updatedAt"},
 					{Header: "By", Key: "updatedBy.name"},
 				})

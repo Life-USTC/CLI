@@ -15,8 +15,21 @@ import (
 
 func NewCmdTeacher() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "teacher <command>",
+		Use:   "teacher [command]",
 		Short: "Browse teachers",
+		Long:  "List and view teacher profiles and their associated sections.",
+		Example: `  # List all teachers
+  life-ustc teacher
+
+  # Search teachers by name
+  life-ustc teacher list -s "zhang"
+
+  # View a specific teacher
+  life-ustc teacher view <teacher-id>`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runTeacherList(cmd, teacherListOpts{})
+		},
 	}
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdView())
@@ -25,59 +38,63 @@ func NewCmdTeacher() *cobra.Command {
 	return cmd
 }
 
+type teacherListOpts struct {
+	departmentID string
+	search       string
+	page         int
+	limit        int
+}
+
+func runTeacherList(cmd *cobra.Command, opts teacherListOpts) error {
+	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	if err != nil {
+		return err
+	}
+	params := url.Values{}
+	if opts.departmentID != "" {
+		params.Set("departmentId", opts.departmentID)
+	}
+	if opts.search != "" {
+		params.Set("search", opts.search)
+	}
+	cmdutil.ApplyListParams(params, opts.page, opts.limit)
+	data, err := c.Get("/api/teachers", params)
+	if err != nil {
+		return err
+	}
+	raw, rows, total, pg := cmdutil.ExtractList(data)
+	output.OutputList(raw, rows, []output.Column{
+		{Header: "ID", Key: "id"},
+		{Header: "Code", Key: "code"},
+		{Header: "Name", Key: "namePrimary"},
+		{Header: "Name (EN)", Key: "nameSecondary"},
+		{Header: "Department", Key: "department.name"},
+	}, total, pg)
+	return nil
+}
+
 func newCmdList() *cobra.Command {
-	var (
-		departmentID string
-		search       string
-		page, limit  int
-	)
+	var opts teacherListOpts
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List teachers",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List teachers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
-			if err != nil {
-				return err
-			}
-			params := url.Values{}
-			if departmentID != "" {
-				params.Set("departmentId", departmentID)
-			}
-			if search != "" {
-				params.Set("search", search)
-			}
-			if page > 0 {
-				params.Set("page", cmdutil.Itoa(page))
-			}
-			if limit > 0 {
-				params.Set("limit", cmdutil.Itoa(limit))
-			}
-			data, err := c.Get("/api/teachers", params)
-			if err != nil {
-				return err
-			}
-			raw, rows, total, pg := cmdutil.ExtractList(data)
-			output.OutputList(raw, rows, []output.Column{
-				{Header: "Code", Key: "code"},
-				{Header: "Name", Key: "namePrimary"},
-				{Header: "Name (EN)", Key: "nameSecondary"},
-				{Header: "Department", Key: "department.name"},
-			}, total, pg)
-			return nil
+			return runTeacherList(cmd, opts)
 		},
 	}
-	cmd.Flags().StringVar(&departmentID, "department-id", "", "Department ID")
-	cmd.Flags().StringVarP(&search, "search", "s", "", "Search query")
-	cmd.Flags().IntVar(&page, "page", 0, "Page number")
-	cmd.Flags().IntVar(&limit, "limit", 0, "Results per page")
+	cmd.Flags().StringVar(&opts.departmentID, "department-id", "", "Department ID")
+	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
 	return cmd
 }
 
 func newCmdView() *cobra.Command {
 	return &cobra.Command{
-		Use:   "view <teacher-id>",
-		Short: "View teacher details",
-		Args:  cobra.ExactArgs(1),
+		Use:     "view <teacher-id>",
+		Aliases: []string{"show"},
+		Short:   "View teacher details",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
@@ -93,6 +110,7 @@ func newCmdView() *cobra.Command {
 			}
 			m := cmdutil.AsMap(data)
 			output.KVWithTitle([]output.KVPair{
+				{Key: "ID", Value: output.Resolve(m, "id")},
 				{Key: "Code", Value: output.Resolve(m, "code")},
 				{Key: "Name", Value: output.Resolve(m, "namePrimary")},
 				{Key: "Name (EN)", Value: output.Resolve(m, "nameSecondary")},
@@ -110,6 +128,7 @@ func newCmdView() *cobra.Command {
 					}
 				}
 				output.Table(rows, []output.Column{
+					{Header: "ID", Key: "id"},
 					{Header: "Code", Key: "code"},
 					{Header: "Course", Key: "course.namePrimary"},
 					{Header: "Semester", Key: "semester.name"},

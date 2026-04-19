@@ -79,22 +79,26 @@ func NewCmdCommentFor(targetType string) *cobra.Command {
 }
 
 func newCmdListFor(targetType string) *cobra.Command {
-	return &cobra.Command{
-		Use:   fmt.Sprintf("list <%s-id>", targetType),
-		Short: fmt.Sprintf("List comments for a %s", targetType),
-		Args:  cobra.ExactArgs(1),
+	var page, limit int
+	cmd := &cobra.Command{
+		Use:     fmt.Sprintf("list <%s-id>", targetType),
+		Aliases: []string{"ls"},
+		Short:   fmt.Sprintf("List comments for a %s", targetType),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
 			params := url.Values{"targetType": {targetType}, "targetId": {args[0]}}
+			cmdutil.ApplyListParams(params, page, limit)
 			data, err := c.Get("/api/comments", params)
 			if err != nil {
 				return err
 			}
 			_, rows, total, pg := cmdutil.ExtractList(data, "comments")
 			output.OutputList(data, rows, []output.Column{
+				{Header: "ID", Key: "id"},
 				{Header: "Body", Key: "body"},
 				{Header: "Visibility", Key: "visibility"},
 				{Header: "Created", Key: "createdAt"},
@@ -102,6 +106,8 @@ func newCmdListFor(targetType string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.AddListFlags(cmd, &page, &limit)
+	return cmd
 }
 
 func newCmdCreateFor(targetType string) *cobra.Command {
@@ -110,9 +116,10 @@ func newCmdCreateFor(targetType string) *cobra.Command {
 		anonymous                  bool
 	)
 	cmd := &cobra.Command{
-		Use:   fmt.Sprintf("create <%s-id>", targetType),
-		Short: fmt.Sprintf("Post a comment on a %s", targetType),
-		Args:  cobra.ExactArgs(1),
+		Use:     fmt.Sprintf("create <%s-id>", targetType),
+		Aliases: []string{"new"},
+		Short:   fmt.Sprintf("Post a comment on a %s", targetType),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if body == "" {
 				if !isInteractive() {
@@ -152,10 +159,14 @@ func newCmdCreateFor(targetType string) *cobra.Command {
 }
 
 func newCmdList() *cobra.Command {
-	var targetType, targetID, sectionID, teacherID string
+	var (
+		targetType, targetID, sectionID, teacherID string
+		page, limit                                int
+	)
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List comments for a target",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List comments for a target",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if targetType == "" {
 				return fmt.Errorf("--target-type is required")
@@ -174,12 +185,14 @@ func newCmdList() *cobra.Command {
 			if teacherID != "" {
 				params.Set("teacherId", teacherID)
 			}
+			cmdutil.ApplyListParams(params, page, limit)
 			data, err := c.Get("/api/comments", params)
 			if err != nil {
 				return err
 			}
 			_, rows, total, pg := cmdutil.ExtractList(data, "comments")
 			output.OutputList(data, rows, []output.Column{
+				{Header: "ID", Key: "id"},
 				{Header: "Body", Key: "body"},
 				{Header: "Visibility", Key: "visibility"},
 				{Header: "Created", Key: "createdAt"},
@@ -191,14 +204,16 @@ func newCmdList() *cobra.Command {
 	cmd.Flags().StringVar(&targetID, "target-id", "", "Target ID")
 	cmd.Flags().StringVar(&sectionID, "section-id", "", "Section ID (for section-teacher)")
 	cmd.Flags().StringVar(&teacherID, "teacher-id", "", "Teacher ID (for section-teacher)")
+	cmdutil.AddListFlags(cmd, &page, &limit)
 	return cmd
 }
 
 func newCmdView() *cobra.Command {
 	return &cobra.Command{
-		Use:   "view <comment-id>",
-		Short: "View a comment thread",
-		Args:  cobra.ExactArgs(1),
+		Use:     "view <comment-id>",
+		Aliases: []string{"show"},
+		Short:   "View a comment thread",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
@@ -232,6 +247,7 @@ func newCmdView() *cobra.Command {
 					}
 				}
 				output.Table(rows, []output.Column{
+					{Header: "ID", Key: "id"},
 					{Header: "Body", Key: "body"},
 					{Header: "Created", Key: "createdAt"},
 				})
@@ -248,9 +264,10 @@ func newCmdCreate() *cobra.Command {
 		anonymous                                  bool
 	)
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Post a comment",
-		Long:  "Post a comment. Prompts interactively when --target-type/--body are omitted.",
+		Use:     "create",
+		Aliases: []string{"new"},
+		Short:   "Post a comment",
+		Long:    "Post a comment. Prompts interactively when --target-type/--body are omitted.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if targetType == "" || body == "" {
 				if !isInteractive() {
@@ -345,7 +362,7 @@ func newCmdUpdate() *cobra.Command {
 				payload["visibility"] = visibility
 			}
 			if len(payload) == 0 {
-				return fmt.Errorf("nothing to update")
+				return fmt.Errorf("nothing to update — specify at least one flag")
 			}
 			_, err = c.Patch(fmt.Sprintf("/api/comments/%s", args[0]), payload)
 			if err != nil {
@@ -363,15 +380,16 @@ func newCmdUpdate() *cobra.Command {
 func newCmdDelete() *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:   "delete <comment-id>",
-		Short: "Delete a comment",
-		Args:  cobra.ExactArgs(1),
+		Use:     "delete <comment-id>",
+		Aliases: []string{"rm"},
+		Short:   "Delete a comment",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
 				fmt.Print("Delete this comment? (y/N) ")
 				s := bufio.NewScanner(os.Stdin)
 				if s.Scan() && strings.ToLower(strings.TrimSpace(s.Text())) != "y" {
-					fmt.Println("Cancelled.")
+					output.Warning("Cancelled.")
 					return nil
 				}
 			}
@@ -387,7 +405,7 @@ func newCmdDelete() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&yes, "yes", false, "Skip confirmation")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation")
 	return cmd
 }
 

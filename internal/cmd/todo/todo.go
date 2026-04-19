@@ -3,6 +3,7 @@ package todo
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -50,9 +51,21 @@ func NewCmdTodo() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "todo [command]",
 		Short: "Manage personal todos",
-		Args:  cobra.NoArgs,
+		Long:  "Create, list, update, and delete personal todo items.",
+		Example: `  # List all pending todos
+  life-ustc me todo list --pending
+
+  # Create a new todo
+  life-ustc me todo create --title "Review notes" --priority high --due 2025-06-01
+
+  # Mark a todo as done
+  life-ustc me todo update <id> --completed
+
+  # Get todo IDs for scripting
+  life-ustc me todo list --jq '.[].id'`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runTodoList(cmd)
+			return runTodoList(cmd, todoListOpts{})
 		},
 	}
 	cmd.AddCommand(newCmdList())
@@ -62,17 +75,50 @@ func NewCmdTodo() *cobra.Command {
 	return cmd
 }
 
-func runTodoList(cmd *cobra.Command) error {
+type todoListOpts struct {
+	done     bool
+	pending  bool
+	priority string
+	before   string
+	after    string
+	sort     string
+	page     int
+	limit    int
+}
+
+func runTodoList(cmd *cobra.Command, opts todoListOpts) error {
 	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 	if err != nil {
 		return err
 	}
-	data, err := c.Get("/api/todos", nil)
+	params := url.Values{}
+	if opts.done {
+		params.Set("isCompleted", "true")
+	}
+	if opts.pending {
+		params.Set("isCompleted", "false")
+	}
+	if opts.priority != "" {
+		params.Set("priority", opts.priority)
+	}
+	if opts.before != "" {
+		params.Set("dueBefore", opts.before)
+	}
+	if opts.after != "" {
+		params.Set("dueAfter", opts.after)
+	}
+	if opts.sort != "" {
+		params.Set("sort", opts.sort)
+	}
+	cmdutil.ApplyListParams(params, opts.page, opts.limit)
+
+	data, err := c.Get("/api/todos", params)
 	if err != nil {
 		return err
 	}
 	_, rows, total, pg := cmdutil.ExtractList(data)
 	output.OutputList(data, rows, []output.Column{
+		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
 		{Header: "Priority", Key: "priority"},
 		{Header: "Done", Key: "isCompleted"},
@@ -82,13 +128,26 @@ func runTodoList(cmd *cobra.Command) error {
 }
 
 func newCmdList() *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List your todos",
+	var opts todoListOpts
+	cmd := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List your todos",
+		Example: `  life-ustc me todo list --pending --priority high
+  life-ustc me todo list --done --sort due
+  life-ustc me todo list --before 2025-06-01 --limit 10`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runTodoList(cmd)
+			return runTodoList(cmd, opts)
 		},
 	}
+	cmd.Flags().BoolVar(&opts.done, "done", false, "Show only completed todos")
+	cmd.Flags().BoolVar(&opts.pending, "pending", false, "Show only pending todos")
+	cmd.Flags().StringVar(&opts.priority, "priority", "", "Filter by priority (low, medium, high)")
+	cmd.Flags().StringVar(&opts.before, "before", "", "Show todos due before this date (ISO 8601)")
+	cmd.Flags().StringVar(&opts.after, "after", "", "Show todos due after this date (ISO 8601)")
+	cmd.Flags().StringVar(&opts.sort, "sort", "", "Sort by field (created, due, priority)")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+	return cmd
 }
 
 func newCmdCreate() *cobra.Command {
@@ -96,9 +155,10 @@ func newCmdCreate() *cobra.Command {
 		title, content, priority, due string
 	)
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a todo",
-		Long:  "Create a todo. When run interactively without --title, prompts for input.",
+		Use:     "create",
+		Aliases: []string{"new"},
+		Short:   "Create a todo",
+		Long:    "Create a todo. When run interactively without --title, prompts for input.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if title == "" {
 				if !isInteractive() {
@@ -185,7 +245,7 @@ func newCmdUpdate() *cobra.Command {
 				body["isCompleted"] = false
 			}
 			if len(body) == 0 {
-				return fmt.Errorf("nothing to update")
+				return fmt.Errorf("nothing to update — specify at least one flag (e.g. --title, --completed)")
 			}
 			_, err = c.Patch(fmt.Sprintf("/api/todos/%s", args[0]), body)
 			if err != nil {
@@ -207,15 +267,16 @@ func newCmdUpdate() *cobra.Command {
 func newCmdDelete() *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:   "delete <todo-id>",
-		Short: "Delete a todo",
-		Args:  cobra.ExactArgs(1),
+		Use:     "delete <todo-id>",
+		Aliases: []string{"rm"},
+		Short:   "Delete a todo",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
 				fmt.Print("Delete this todo? (y/N) ")
 				scanner := bufio.NewScanner(os.Stdin)
 				if scanner.Scan() && strings.ToLower(strings.TrimSpace(scanner.Text())) != "y" {
-					fmt.Println("Cancelled.")
+					output.Warning("Cancelled.")
 					return nil
 				}
 			}
@@ -231,6 +292,6 @@ func newCmdDelete() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&yes, "yes", false, "Skip confirmation")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation")
 	return cmd
 }

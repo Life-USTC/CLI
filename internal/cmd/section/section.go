@@ -19,8 +19,21 @@ import (
 
 func NewCmdSection() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "section <command>",
+		Use:   "section [command]",
 		Short: "Browse class sections",
+		Long:  "List, view, and manage class sections including schedules and calendars.",
+		Example: `  # List all sections
+  life-ustc section
+
+  # Search sections by keyword
+  life-ustc section list -s "calculus"
+
+  # View a specific section
+  life-ustc section view <jw-id>`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSectionList(cmd, sectionListOpts{})
+		},
 	}
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdView())
@@ -33,74 +46,83 @@ func NewCmdSection() *cobra.Command {
 	return cmd
 }
 
+type sectionListOpts struct {
+	courseID   string
+	semesterID string
+	campusID  string
+	teacherID string
+	search    string
+	ids       string
+	page      int
+	limit     int
+}
+
+func runSectionList(cmd *cobra.Command, opts sectionListOpts) error {
+	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	if err != nil {
+		return err
+	}
+	params := url.Values{}
+	if opts.courseID != "" {
+		params.Set("courseId", opts.courseID)
+	}
+	if opts.semesterID != "" {
+		params.Set("semesterId", opts.semesterID)
+	}
+	if opts.campusID != "" {
+		params.Set("campusId", opts.campusID)
+	}
+	if opts.teacherID != "" {
+		params.Set("teacherId", opts.teacherID)
+	}
+	if opts.search != "" {
+		params.Set("search", opts.search)
+	}
+	if opts.ids != "" {
+		params.Set("ids", opts.ids)
+	}
+	cmdutil.ApplyListParams(params, opts.page, opts.limit)
+	data, err := c.Get("/api/sections", params)
+	if err != nil {
+		return err
+	}
+	raw, rows, total, pg := cmdutil.ExtractList(data)
+	output.OutputList(raw, rows, []output.Column{
+		{Header: "ID", Key: "id"},
+		{Header: "Code", Key: "code"},
+		{Header: "Course", Key: "course.namePrimary"},
+		{Header: "Semester", Key: "semester.name"},
+		{Header: "Campus", Key: "campus.name"},
+	}, total, pg)
+	return nil
+}
+
 func newCmdList() *cobra.Command {
-	var (
-		courseID, semesterID, campusID, teacherID, search, ids string
-		page, limit                                            int
-	)
+	var opts sectionListOpts
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List sections",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List sections",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
-			if err != nil {
-				return err
-			}
-			params := url.Values{}
-			if courseID != "" {
-				params.Set("courseId", courseID)
-			}
-			if semesterID != "" {
-				params.Set("semesterId", semesterID)
-			}
-			if campusID != "" {
-				params.Set("campusId", campusID)
-			}
-			if teacherID != "" {
-				params.Set("teacherId", teacherID)
-			}
-			if search != "" {
-				params.Set("search", search)
-			}
-			if ids != "" {
-				params.Set("ids", ids)
-			}
-			if page > 0 {
-				params.Set("page", cmdutil.Itoa(page))
-			}
-			if limit > 0 {
-				params.Set("limit", cmdutil.Itoa(limit))
-			}
-			data, err := c.Get("/api/sections", params)
-			if err != nil {
-				return err
-			}
-			raw, rows, total, pg := cmdutil.ExtractList(data)
-			output.OutputList(raw, rows, []output.Column{
-				{Header: "Code", Key: "code"},
-				{Header: "Course", Key: "course.namePrimary"},
-				{Header: "Semester", Key: "semester.name"},
-				{Header: "Campus", Key: "campus.name"},
-			}, total, pg)
-			return nil
+			return runSectionList(cmd, opts)
 		},
 	}
-	cmd.Flags().StringVar(&courseID, "course-id", "", "Course ID")
-	cmd.Flags().StringVar(&semesterID, "semester-id", "", "Semester ID")
-	cmd.Flags().StringVar(&campusID, "campus-id", "", "Campus ID")
-	cmd.Flags().StringVar(&teacherID, "teacher-id", "", "Teacher ID")
-	cmd.Flags().StringVarP(&search, "search", "s", "", "Search query")
-	cmd.Flags().StringVar(&ids, "ids", "", "Comma-separated section IDs")
-	cmd.Flags().IntVar(&page, "page", 0, "Page number")
-	cmd.Flags().IntVar(&limit, "limit", 0, "Results per page")
+	cmd.Flags().StringVar(&opts.courseID, "course-id", "", "Course ID")
+	cmd.Flags().StringVar(&opts.semesterID, "semester-id", "", "Semester ID")
+	cmd.Flags().StringVar(&opts.campusID, "campus-id", "", "Campus ID")
+	cmd.Flags().StringVar(&opts.teacherID, "teacher-id", "", "Teacher ID")
+	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
+	cmd.Flags().StringVar(&opts.ids, "ids", "", "Comma-separated section IDs")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
 	return cmd
 }
 
 func newCmdView() *cobra.Command {
 	return &cobra.Command{
-		Use:   "view <jw-id>",
-		Short: "View section details",
-		Args:  cobra.ExactArgs(1),
+		Use:     "view <jw-id>",
+		Aliases: []string{"show"},
+		Short:   "View section details",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
@@ -116,6 +138,7 @@ func newCmdView() *cobra.Command {
 			}
 			m := cmdutil.AsMap(data)
 			output.KVWithTitle([]output.KVPair{
+				{Key: "ID", Value: output.Resolve(m, "id")},
 				{Key: "Code", Value: output.Resolve(m, "code")},
 				{Key: "Course", Value: output.Resolve(m, "course.namePrimary")},
 				{Key: "Semester", Value: output.Resolve(m, "semester.name")},
@@ -132,6 +155,7 @@ func newCmdView() *cobra.Command {
 					}
 				}
 				output.Table(rows, []output.Column{
+					{Header: "ID", Key: "id"},
 					{Header: "Name", Key: "namePrimary"},
 					{Header: "Name (EN)", Key: "nameSecondary"},
 					{Header: "Department", Key: "department.name"},
@@ -148,6 +172,7 @@ func newCmdView() *cobra.Command {
 					}
 				}
 				output.Table(rows, []output.Column{
+					{Header: "ID", Key: "id"},
 					{Header: "Day", Key: "weekday"},
 					{Header: "Start", Key: "startTime"},
 					{Header: "End", Key: "endTime"},
@@ -175,6 +200,7 @@ func newCmdSchedules() *cobra.Command {
 			}
 			_, rows, total, pg := cmdutil.ExtractList(data)
 			output.OutputList(data, rows, []output.Column{
+				{Header: "ID", Key: "id"},
 				{Header: "Day", Key: "weekday"},
 				{Header: "Start", Key: "startTime"},
 				{Header: "End", Key: "endTime"},
@@ -241,6 +267,7 @@ func newCmdMatchCodes() *cobra.Command {
 			}
 			_, rows, total, pg := cmdutil.ExtractList(data)
 			output.OutputList(data, rows, []output.Column{
+				{Header: "ID", Key: "id"},
 				{Header: "Code", Key: "code"},
 				{Header: "Course", Key: "course.namePrimary"},
 				{Header: "Semester", Key: "semester.name"},

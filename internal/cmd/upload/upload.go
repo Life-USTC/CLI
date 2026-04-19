@@ -58,6 +58,7 @@ func runUploadList(cmd *cobra.Command) error {
 	}
 
 	output.Table(rows, []output.Column{
+		{Header: "ID", Key: "id"},
 		{Header: "Filename", Key: "filename"},
 		{Header: "Type", Key: "contentType"},
 		{Header: "Size", Key: "size"},
@@ -67,8 +68,9 @@ func runUploadList(cmd *cobra.Command) error {
 
 func newCmdList() *cobra.Command {
 	return &cobra.Command{
-		Use:   "list",
-		Short: "List your uploads",
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List your uploads",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUploadList(cmd)
 		},
@@ -78,9 +80,10 @@ func newCmdList() *cobra.Command {
 func newCmdFile() *cobra.Command {
 	var contentType string
 	cmd := &cobra.Command{
-		Use:   "file <filepath>",
-		Short: "Upload a file",
-		Args:  cobra.ExactArgs(1),
+		Use:     "file <filepath>",
+		Aliases: []string{"add"},
+		Short:   "Upload a file",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			filePath := args[0]
 			f, err := os.Open(filePath)
@@ -155,9 +158,10 @@ func newCmdFile() *cobra.Command {
 func newCmdRename() *cobra.Command {
 	var filename string
 	cmd := &cobra.Command{
-		Use:   "rename <upload-id>",
-		Short: "Rename an upload",
-		Args:  cobra.ExactArgs(1),
+		Use:     "rename <upload-id>",
+		Aliases: []string{"mv"},
+		Short:   "Rename an upload",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
@@ -179,15 +183,16 @@ func newCmdRename() *cobra.Command {
 func newCmdDelete() *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
-		Use:   "delete <upload-id>",
-		Short: "Delete an upload",
-		Args:  cobra.ExactArgs(1),
+		Use:     "delete <upload-id>",
+		Aliases: []string{"rm"},
+		Short:   "Delete an upload",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
 				fmt.Print("Delete this upload? (y/N) ")
 				s := bufio.NewScanner(os.Stdin)
 				if s.Scan() && strings.ToLower(strings.TrimSpace(s.Text())) != "y" {
-					fmt.Println("Cancelled.")
+					output.Warning("Cancelled.")
 					return nil
 				}
 			}
@@ -203,16 +208,17 @@ func newCmdDelete() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&yes, "yes", false, "Skip confirmation")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation")
 	return cmd
 }
 
 func newCmdDownload() *cobra.Command {
 	var outFile string
 	cmd := &cobra.Command{
-		Use:   "download <upload-id>",
-		Short: "Download a file",
-		Args:  cobra.ExactArgs(1),
+		Use:     "download <upload-id>",
+		Aliases: []string{"dl"},
+		Short:   "Download a file",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
