@@ -2,6 +2,7 @@ package homework
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -261,7 +262,6 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 		}
 		for _, s := range sections {
 			if sm, ok := s.(map[string]any); ok {
-				// Section IDs are integers in the API
 				if id, ok := sm["id"].(float64); ok {
 					sectionIDs = append(sectionIDs, cmdutil.Itoa(int(id)))
 				}
@@ -274,44 +274,79 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 		output.VerboseF("fetching homework from %d subscribed sections", len(sectionIDs))
 	}
 
-	// Query homework for each section and aggregate
-	var allRows []map[string]any
-	var allRaw []any
-	for _, sid := range sectionIDs {
-		params := url.Values{"sectionId": {sid}}
+	// Build common filter params (reusable for bulk and per-section)
+	filterParams := func() url.Values {
+		p := url.Values{}
 		if opts.done {
-			params.Set("isCompleted", "true")
+			p.Set("isCompleted", "true")
 		}
 		if opts.pending {
-			params.Set("isCompleted", "false")
+			p.Set("isCompleted", "false")
 		}
 		if opts.before != "" {
-			params.Set("dueBefore", opts.before)
+			p.Set("dueBefore", opts.before)
 		}
 		if opts.after != "" {
-			params.Set("dueAfter", opts.after)
+			p.Set("dueAfter", opts.after)
 		}
-		data, err := c.Get("/api/homeworks", params)
+		return p
+	}
+
+	var data any
+	var rows []map[string]any
+	var total int
+
+	if len(sectionIDs) == 1 {
+		// Single section — always use sectionId
+		params := filterParams()
+		params.Set("sectionId", sectionIDs[0])
+		cmdutil.ApplyListParams(params, opts.page, opts.limit)
+		data, err = c.Get("/api/homeworks", params)
 		if err != nil {
-			output.VerboseF("section %s: %s", sid, err)
-			continue
+			return err
 		}
-		_, rows, _, _ := cmdutil.ExtractList(data, "homeworks")
-		allRows = append(allRows, rows...)
-		// Collect raw homework arrays for JSON output
-		m := cmdutil.AsMap(data)
-		if hws, ok := m["homeworks"].([]any); ok {
-			allRaw = append(allRaw, hws...)
+		_, rows, total, _ = cmdutil.ExtractList(data, "homeworks")
+	} else {
+		// Multiple sections — try bulk sectionIds, fall back to per-section
+		params := filterParams()
+		params.Set("sectionIds", strings.Join(sectionIDs, ","))
+		cmdutil.ApplyListParams(params, opts.page, opts.limit)
+		data, err = c.Get("/api/homeworks", params)
+
+		var apiErr *api.APIError
+		if err != nil && errors.As(err, &apiErr) && apiErr.Status == 400 {
+			// Server doesn't support sectionIds yet — fall back to per-section queries
+			output.VerboseF("bulk sectionIds not supported, falling back to per-section queries")
+			var allRows []map[string]any
+			for _, sid := range sectionIDs {
+				fp := filterParams()
+				fp.Set("sectionId", sid)
+				sData, sErr := c.Get("/api/homeworks", fp)
+				if sErr != nil {
+					output.VerboseF("section %s: %s", sid, sErr)
+					continue
+				}
+				_, sRows, _, _ := cmdutil.ExtractList(sData, "homeworks")
+				allRows = append(allRows, sRows...)
+			}
+			rows = allRows
+			total = len(allRows)
+			// Build a synthetic response for JSON output
+			data = map[string]any{"homeworks": allRows}
+		} else if err != nil {
+			return err
+		} else {
+			_, rows, total, _ = cmdutil.ExtractList(data, "homeworks")
 		}
 	}
 
-	// For JSON/JQ output, return the aggregated array
+	// For JSON/JQ output, return the full response
 	if output.IsJSON() {
-		output.JSON(allRaw)
+		output.JSON(data)
 		return nil
 	}
 
-	if len(allRows) == 0 {
+	if len(rows) == 0 {
 		output.Dim("  No homeworks found.")
 		if opts.done || opts.pending || opts.before != "" || opts.after != "" {
 			output.Hint("try adjusting your filters, or run without filters to see all items")
@@ -319,11 +354,15 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 		return nil
 	}
 
-	output.Dim(fmt.Sprintf("  %d homework(s) across %d section(s)", len(allRows), len(sectionIDs)))
-	output.Table(allRows, []output.Column{
+	if total > 0 {
+		output.Dim(fmt.Sprintf("  %d homework(s) across %d section(s)", total, len(sectionIDs)))
+	} else {
+		output.Dim(fmt.Sprintf("  %d homework(s) across %d section(s)", len(rows), len(sectionIDs)))
+	}
+	output.Table(rows, []output.Column{
 		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
-		{Header: "Section", Key: "sectionId"},
+		{Header: "Section", Key: "section.code"},
 		{Header: "Due", Key: "submissionDueAt"},
 		{Header: "Major", Key: "isMajor"},
 	})

@@ -8,12 +8,13 @@ import (
 	"io"
 	"math"
 	"os"
+	"regexp"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/itchyny/gojq"
+	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 )
 
@@ -106,6 +107,31 @@ type Column struct {
 	Key    string
 }
 
+// ansiRe strips ANSI escape sequences for width measurement.
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// displayWidth returns the visual column width of s, ignoring ANSI codes.
+func displayWidth(s string) int {
+	return runewidth.StringWidth(ansiRe.ReplaceAllString(s, ""))
+}
+
+// padRight pads s to width w using display-aware padding.
+func padRight(s string, w int) string {
+	dw := displayWidth(s)
+	if dw >= w {
+		return s
+	}
+	return s + strings.Repeat(" ", w-dw)
+}
+
+// termWidth returns the current terminal width, or 120 as default.
+func termWidth() int {
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		return w
+	}
+	return 120
+}
+
 func Table(rows []map[string]any, cols []Column) {
 	TableTo(os.Stdout, rows, cols, "No results.")
 }
@@ -116,24 +142,79 @@ func TableTo(w io.Writer, rows []map[string]any, cols []Column, emptyMsg string)
 		return
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	gap := 2 // minimum gap between columns
 
-	// Header
-	hdrs := make([]string, len(cols))
+	// Format all cells and headers
+	headers := make([]string, len(cols))
 	for i, c := range cols {
-		hdrs[i] = color.New(color.Bold, color.Faint).Sprint(strings.ToUpper(c.Header))
+		headers[i] = color.New(color.Bold, color.Faint).Sprint(strings.ToUpper(c.Header))
 	}
-	_, _ = fmt.Fprintln(tw, strings.Join(hdrs, "\t"))
 
-	// Rows
-	for _, row := range rows {
-		vals := make([]string, len(cols))
+	formatted := make([][]string, len(rows))
+	for r, row := range rows {
+		formatted[r] = make([]string, len(cols))
 		for i, c := range cols {
-			vals[i] = FormatCell(Resolve(row, c.Key))
+			formatted[r][i] = FormatCell(Resolve(row, c.Key))
 		}
-		_, _ = fmt.Fprintln(tw, strings.Join(vals, "\t"))
 	}
-	_ = tw.Flush()
+
+	// Compute max display width per column (header + all data rows)
+	colWidths := make([]int, len(cols))
+	for i, c := range cols {
+		colWidths[i] = runewidth.StringWidth(strings.ToUpper(c.Header))
+	}
+	for _, cells := range formatted {
+		for i, cell := range cells {
+			if cw := displayWidth(cell); cw > colWidths[i] {
+				colWidths[i] = cw
+			}
+		}
+	}
+
+	// Truncate last column to fit terminal if needed
+	tw := termWidth()
+	totalWidth := 0
+	for i, cw := range colWidths {
+		totalWidth += cw
+		if i < len(colWidths)-1 {
+			totalWidth += gap
+		}
+	}
+	if totalWidth > tw && len(colWidths) > 1 {
+		available := tw
+		for i := 0; i < len(colWidths)-1; i++ {
+			available -= colWidths[i] + gap
+		}
+		if available < 4 {
+			available = 4
+		}
+		colWidths[len(colWidths)-1] = available
+	}
+
+	// Print header
+	hdrParts := make([]string, len(cols))
+	for i := range cols {
+		hdrParts[i] = padRight(headers[i], colWidths[i])
+	}
+	_, _ = fmt.Fprintln(w, strings.Join(hdrParts, strings.Repeat(" ", gap)))
+
+	// Print rows
+	for _, cells := range formatted {
+		parts := make([]string, len(cols))
+		for i, cell := range cells {
+			if i == len(cols)-1 {
+				// Last column: truncate if wider than allowed
+				if displayWidth(cell) > colWidths[i] {
+					plain := ansiRe.ReplaceAllString(cell, "")
+					cell = runewidth.Truncate(plain, colWidths[i]-1, "…")
+				}
+				parts[i] = cell
+			} else {
+				parts[i] = padRight(cell, colWidths[i])
+			}
+		}
+		_, _ = fmt.Fprintln(w, strings.Join(parts, strings.Repeat(" ", gap)))
+	}
 }
 
 // --- Key-value output ---
