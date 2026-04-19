@@ -47,11 +47,11 @@ func runUploadList(cmd *cobra.Command) error {
 		return nil
 	}
 	m := cmdutil.AsMap(data)
-	_, rows, _, _ := cmdutil.ExtractList(data)
+	_, rows, _, _ := cmdutil.ExtractList(data, "uploads")
 
 	if m != nil {
-		used, _ := m["totalSize"].(float64)
-		quota, _ := m["quota"].(float64)
+		used, _ := m["usedBytes"].(float64)
+		quota, _ := m["quotaBytes"].(float64)
 		if quota > 0 {
 			output.Dim(fmt.Sprintf("  Usage: %s / %s", humanSize(int64(used)), humanSize(int64(quota))))
 		}

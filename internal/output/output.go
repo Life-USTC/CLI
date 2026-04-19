@@ -186,15 +186,11 @@ func OutputList(raw any, rows []map[string]any, cols []Column, total, page int) 
 	}
 
 	// Pagination header
-	if total > 0 {
+	if total > 0 && len(rows) > 0 {
 		limit := len(rows)
-		if limit > 0 && total > limit {
+		if total > limit {
 			pages := int(math.Ceil(float64(total) / float64(limit)))
 			if page > 0 {
-				if page > pages {
-					Warning(fmt.Sprintf("Page %d is out of range — only %d page(s) available (total: %d)", page, pages, total))
-					return
-				}
 				Dim(fmt.Sprintf("  Showing %d of %d · page %d of %d", len(rows), total, page, pages))
 			} else {
 				Dim(fmt.Sprintf("  Showing %d of %d · use --page/-p to paginate", len(rows), total))
@@ -206,7 +202,11 @@ func OutputList(raw any, rows []map[string]any, cols []Column, total, page int) 
 
 	// Empty state
 	if len(rows) == 0 {
-		if total == 0 {
+		if total > 0 && page > 0 {
+			// We have results but this page is empty — out of bounds
+			Warning(fmt.Sprintf("Page %d is out of range (total: %d results)", page, total))
+			Hint("try a lower --page value")
+		} else {
 			Dim("  No results found.")
 			Hint("try adjusting your filters, or run without filters to see all items")
 		}

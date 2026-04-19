@@ -38,13 +38,23 @@ func runCalendarGet(cmd *cobra.Command) error {
 		output.JSON(data)
 		return nil
 	}
+
+	// API returns {"subscription": {...}} — unwrap
 	m := cmdutil.AsMap(data)
+	sub, _ := m["subscription"].(map[string]any)
+	if sub == nil {
+		output.Dim("  No calendar subscription found.")
+		return nil
+	}
+
+	calURL, _ := sub["calendarUrl"].(string)
+	note, _ := sub["note"].(string)
 	output.KVWithTitle([]output.KVPair{
-		{Key: "URL", Value: output.Resolve(m, "url")},
-		{Key: "Note", Value: output.Resolve(m, "note")},
+		{Key: "URL", Value: calURL},
+		{Key: "Note", Value: note},
 	}, "Calendar subscription")
 
-	if sections, ok := m["sections"].([]any); ok && len(sections) > 0 {
+	if sections, ok := sub["sections"].([]any); ok && len(sections) > 0 {
 		fmt.Println()
 		output.Bold("  Sections")
 		var rows []map[string]any
@@ -54,8 +64,9 @@ func runCalendarGet(cmd *cobra.Command) error {
 			}
 		}
 		output.Table(rows, []output.Column{
+			{Header: "ID", Key: "id"},
 			{Header: "Code", Key: "code"},
-			{Header: "Course", Key: "course.namePrimary"},
+			{Header: "Course", Key: "course.name"},
 			{Header: "Semester", Key: "semester.name"},
 		})
 	}

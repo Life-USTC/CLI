@@ -118,12 +118,12 @@ func runTodoList(cmd *cobra.Command, opts todoListOpts) error {
 	if err != nil {
 		return err
 	}
-	_, rows, total, pg := cmdutil.ExtractList(data)
+	_, rows, total, pg := cmdutil.ExtractList(data, "todos")
 	output.OutputList(data, rows, []output.Column{
 		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
 		{Header: "Priority", Key: "priority"},
-		{Header: "Done", Key: "isCompleted"},
+		{Header: "Done", Key: "completed"},
 		{Header: "Due", Key: "dueAt"},
 	}, total, pg)
 	return nil

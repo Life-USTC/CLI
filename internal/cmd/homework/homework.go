@@ -178,19 +178,28 @@ type myHomeworkListOpts struct {
 
 // NewCmdMyHomework returns personal homework commands (list + complete).
 func NewCmdMyHomework() *cobra.Command {
+	var opts myHomeworkListOpts
 	cmd := &cobra.Command{
 		Use:   "homework [command]",
 		Short: "View and manage your homeworks",
-		Long:  "List your assigned homeworks and mark them as complete.",
-		Example: `  # List homeworks for a section
-  life-ustc me homework list --section-id <id>
+		Long:  "List your assigned homeworks and mark them as complete.\nWhen no --section-id is given, aggregates homework from all your subscribed sections.",
+		Example: `  # List all your homeworks (from subscribed sections)
+  life-ustc me homework
 
   # Show only pending homeworks
-  life-ustc me homework --section-id <id> --pending
+  life-ustc me homework --pending
+
+  # Filter to a specific section
+  life-ustc me homework list --section-id <id>
 
   # Mark a homework as done
   life-ustc me homework complete <homework-id>`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMyHomeworkList(cmd, opts)
+		},
 	}
+	addMyHomeworkListFlags(cmd, &opts)
 	cmd.AddCommand(newCmdMyList())
 	cmd.AddCommand(newCmdComplete())
 	return cmd
@@ -202,13 +211,11 @@ func newCmdMyList() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List your homeworks",
-		Example: `  life-ustc me homework list --section-id <id>
-  life-ustc me homework list --section-id <id> --pending
-  life-ustc me homework list --section-id <id> --before 2025-06-01`,
+		Example: `  life-ustc me homework list
+  life-ustc me homework list --section-id <id>
+  life-ustc me homework list --pending
+  life-ustc me homework list --before 2025-06-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if opts.sectionID == "" {
-				return fmt.Errorf("--section-id is required (the homework API requires a section)\n\n  Tip: use 'life-ustc section homework list <section-id>' for an alternative")
-			}
 			return runMyHomeworkList(cmd, opts)
 		},
 	}
@@ -230,31 +237,96 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 	if err != nil {
 		return err
 	}
-	params := url.Values{"sectionId": {opts.sectionID}}
-	if opts.done {
-		params.Set("isCompleted", "true")
+
+	// Determine section IDs to query
+	var sectionIDs []string
+	if opts.sectionID != "" {
+		sectionIDs = []string{opts.sectionID}
+	} else {
+		// Fetch subscribed sections from calendar
+		calData, calErr := c.Get("/api/calendar-subscriptions/current", nil)
+		if calErr != nil {
+			return fmt.Errorf("failed to fetch subscribed sections: %w\n\n  Tip: use --section-id to specify a section directly", calErr)
+		}
+		calMap := cmdutil.AsMap(calData)
+		sub, _ := calMap["subscription"].(map[string]any)
+		if sub == nil {
+			return fmt.Errorf("no calendar subscription found\n\n  Tip: subscribe to sections first, or use --section-id")
+		}
+		sections, _ := sub["sections"].([]any)
+		if len(sections) == 0 {
+			output.Dim("  No subscribed sections — no homeworks to show.")
+			output.Hint("subscribe to sections first, or use --section-id")
+			return nil
+		}
+		for _, s := range sections {
+			if sm, ok := s.(map[string]any); ok {
+				// Section IDs are integers in the API
+				if id, ok := sm["id"].(float64); ok {
+					sectionIDs = append(sectionIDs, cmdutil.Itoa(int(id)))
+				}
+			}
+		}
+		if len(sectionIDs) == 0 {
+			output.Dim("  No subscribed sections — no homeworks to show.")
+			return nil
+		}
+		output.VerboseF("fetching homework from %d subscribed sections", len(sectionIDs))
 	}
-	if opts.pending {
-		params.Set("isCompleted", "false")
+
+	// Query homework for each section and aggregate
+	var allRows []map[string]any
+	var allRaw []any
+	for _, sid := range sectionIDs {
+		params := url.Values{"sectionId": {sid}}
+		if opts.done {
+			params.Set("isCompleted", "true")
+		}
+		if opts.pending {
+			params.Set("isCompleted", "false")
+		}
+		if opts.before != "" {
+			params.Set("dueBefore", opts.before)
+		}
+		if opts.after != "" {
+			params.Set("dueAfter", opts.after)
+		}
+		data, err := c.Get("/api/homeworks", params)
+		if err != nil {
+			output.VerboseF("section %s: %s", sid, err)
+			continue
+		}
+		_, rows, _, _ := cmdutil.ExtractList(data, "homeworks")
+		allRows = append(allRows, rows...)
+		// Collect raw homework arrays for JSON output
+		m := cmdutil.AsMap(data)
+		if hws, ok := m["homeworks"].([]any); ok {
+			allRaw = append(allRaw, hws...)
+		}
 	}
-	if opts.before != "" {
-		params.Set("dueBefore", opts.before)
+
+	// For JSON/JQ output, return the aggregated array
+	if output.IsJSON() {
+		output.JSON(allRaw)
+		return nil
 	}
-	if opts.after != "" {
-		params.Set("dueAfter", opts.after)
+
+	if len(allRows) == 0 {
+		output.Dim("  No homeworks found.")
+		if opts.done || opts.pending || opts.before != "" || opts.after != "" {
+			output.Hint("try adjusting your filters, or run without filters to see all items")
+		}
+		return nil
 	}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-	data, err := c.Get("/api/homeworks", params)
-	if err != nil {
-		return err
-	}
-	_, rows, total, pg := cmdutil.ExtractList(data, "homeworks")
-	output.OutputList(data, rows, []output.Column{
+
+	output.Dim(fmt.Sprintf("  %d homework(s) across %d section(s)", len(allRows), len(sectionIDs)))
+	output.Table(allRows, []output.Column{
 		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
+		{Header: "Section", Key: "sectionId"},
 		{Header: "Due", Key: "submissionDueAt"},
 		{Header: "Major", Key: "isMajor"},
-	}, total, pg)
+	})
 	return nil
 }
 

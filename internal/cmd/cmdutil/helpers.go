@@ -36,6 +36,10 @@ func ApplyListParams(params interface{ Set(string, string) }, page, limit int) {
 }
 
 // ExtractList pulls rows and pagination info from a standard API list response.
+// The API may return pagination at the top level or nested under a "pagination" key:
+//
+//	{"data": [...], "pagination": {"total": N, "page": N, "totalPages": N}}
+//	{"todos": [...]}
 func ExtractList(data any, listKeys ...string) (raw any, rows []map[string]any, total int, page int) {
 	raw = data
 	m, ok := data.(map[string]any)
@@ -66,10 +70,15 @@ func ExtractList(data any, listKeys ...string) (raw any, rows []map[string]any, 
 		}
 	}
 
-	if t, ok := m["total"].(float64); ok {
+	// Extract pagination — check nested "pagination" object first, then top-level
+	pg := m
+	if nested, ok := m["pagination"].(map[string]any); ok {
+		pg = nested
+	}
+	if t, ok := pg["total"].(float64); ok {
 		total = int(t)
 	}
-	if p, ok := m["page"].(float64); ok {
+	if p, ok := pg["page"].(float64); ok {
 		page = int(p)
 	}
 	return
