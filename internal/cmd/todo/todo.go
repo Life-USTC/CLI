@@ -48,12 +48,13 @@ func promptSelect(label string, choices []string) string {
 }
 
 func NewCmdTodo() *cobra.Command {
+	var opts todoListOpts
 	cmd := &cobra.Command{
 		Use:   "todo [command]",
 		Short: "Manage personal todos",
 		Long:  "Create, list, update, and delete personal todo items.",
 		Example: `  # List all pending todos
-  life-ustc me todo list --pending
+  life-ustc me todo --pending
 
   # Create a new todo
   life-ustc me todo create --title "Review notes" --priority high --due 2025-06-01
@@ -62,12 +63,13 @@ func NewCmdTodo() *cobra.Command {
   life-ustc me todo update <id> --completed
 
   # Get todo IDs for scripting
-  life-ustc me todo list --jq '.[].id'`,
+  life-ustc me todo --jq '.[].id'`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runTodoList(cmd, todoListOpts{})
+			return runTodoList(cmd, opts)
 		},
 	}
+	addTodoListFlags(cmd, &opts)
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdCreate())
 	cmd.AddCommand(newCmdUpdate())
@@ -127,6 +129,16 @@ func runTodoList(cmd *cobra.Command, opts todoListOpts) error {
 	return nil
 }
 
+func addTodoListFlags(cmd *cobra.Command, opts *todoListOpts) {
+	cmd.Flags().BoolVar(&opts.done, "done", false, "Show only completed todos")
+	cmd.Flags().BoolVar(&opts.pending, "pending", false, "Show only pending todos")
+	cmd.Flags().StringVar(&opts.priority, "priority", "", "Filter by priority (low, medium, high)")
+	cmd.Flags().StringVar(&opts.before, "before", "", "Show todos due before this date (ISO 8601)")
+	cmd.Flags().StringVar(&opts.after, "after", "", "Show todos due after this date (ISO 8601)")
+	cmd.Flags().StringVar(&opts.sort, "sort", "", "Sort by field (created, due, priority)")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+}
+
 func newCmdList() *cobra.Command {
 	var opts todoListOpts
 	cmd := &cobra.Command{
@@ -140,13 +152,7 @@ func newCmdList() *cobra.Command {
 			return runTodoList(cmd, opts)
 		},
 	}
-	cmd.Flags().BoolVar(&opts.done, "done", false, "Show only completed todos")
-	cmd.Flags().BoolVar(&opts.pending, "pending", false, "Show only pending todos")
-	cmd.Flags().StringVar(&opts.priority, "priority", "", "Filter by priority (low, medium, high)")
-	cmd.Flags().StringVar(&opts.before, "before", "", "Show todos due before this date (ISO 8601)")
-	cmd.Flags().StringVar(&opts.after, "after", "", "Show todos due after this date (ISO 8601)")
-	cmd.Flags().StringVar(&opts.sort, "sort", "", "Sort by field (created, due, priority)")
-	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+	addTodoListFlags(cmd, &opts)
 	return cmd
 }
 

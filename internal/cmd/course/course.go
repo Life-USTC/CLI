@@ -14,6 +14,7 @@ import (
 )
 
 func NewCmdCourse() *cobra.Command {
+	var opts courseListOpts
 	cmd := &cobra.Command{
 		Use:   "course [command]",
 		Short: "Browse courses",
@@ -22,15 +23,16 @@ func NewCmdCourse() *cobra.Command {
   life-ustc course
 
   # Search courses by keyword
-  life-ustc course list -s "linear algebra"
+  life-ustc course -s "linear algebra"
 
   # View a specific course
   life-ustc course view <jw-id>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCourseList(cmd, courseListOpts{})
+			return runCourseList(cmd, opts)
 		},
 	}
+	addCourseListFlags(cmd, &opts)
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdView())
 	cmd.AddCommand(comment.NewCmdCommentFor("course"))
@@ -77,6 +79,13 @@ func runCourseList(cmd *cobra.Command, opts courseListOpts) error {
 	return nil
 }
 
+func addCourseListFlags(cmd *cobra.Command, opts *courseListOpts) {
+	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
+	cmd.Flags().StringVar(&opts.educationLevelID, "education-level-id", "", "Education level ID")
+	cmd.Flags().StringVar(&opts.categoryID, "category-id", "", "Category ID")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+}
+
 func newCmdList() *cobra.Command {
 	var opts courseListOpts
 	cmd := &cobra.Command{
@@ -87,10 +96,7 @@ func newCmdList() *cobra.Command {
 			return runCourseList(cmd, opts)
 		},
 	}
-	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
-	cmd.Flags().StringVar(&opts.educationLevelID, "education-level-id", "", "Education level ID")
-	cmd.Flags().StringVar(&opts.categoryID, "category-id", "", "Category ID")
-	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+	addCourseListFlags(cmd, &opts)
 	return cmd
 }
 

@@ -88,7 +88,7 @@ func newCmdSectionList() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, rows, total, pg := cmdutil.ExtractList(data)
+			_, rows, total, pg := cmdutil.ExtractList(data, "homeworks")
 			output.OutputList(data, rows, []output.Column{
 				{Header: "ID", Key: "id"},
 				{Header: "Title", Key: "title"},
@@ -167,54 +167,62 @@ func newCmdSectionCreate() *cobra.Command {
 }
 
 type myHomeworkListOpts struct {
-	done   bool
-	pending bool
-	before string
-	after  string
-	page   int
-	limit  int
+	sectionID string
+	done      bool
+	pending   bool
+	before    string
+	after     string
+	page      int
+	limit     int
 }
 
 // NewCmdMyHomework returns personal homework commands (list + complete).
-// Running without a subcommand lists your homeworks.
 func NewCmdMyHomework() *cobra.Command {
-	var opts myHomeworkListOpts
 	cmd := &cobra.Command{
 		Use:   "homework [command]",
 		Short: "View and manage your homeworks",
 		Long:  "List your assigned homeworks and mark them as complete.",
-		Example: `  # List all your homeworks
-  life-ustc me homework
+		Example: `  # List homeworks for a section
+  life-ustc me homework list --section-id <id>
 
   # Show only pending homeworks
-  life-ustc me homework list --pending
-
-  # Show homeworks due before a date
-  life-ustc me homework list --before 2025-06-01
+  life-ustc me homework --section-id <id> --pending
 
   # Mark a homework as done
   life-ustc me homework complete <homework-id>`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runMyHomeworkList(cmd, opts)
-		},
 	}
-	listCmd := &cobra.Command{
+	cmd.AddCommand(newCmdMyList())
+	cmd.AddCommand(newCmdComplete())
+	return cmd
+}
+
+func newCmdMyList() *cobra.Command {
+	var opts myHomeworkListOpts
+	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List your homeworks",
+		Example: `  life-ustc me homework list --section-id <id>
+  life-ustc me homework list --section-id <id> --pending
+  life-ustc me homework list --section-id <id> --before 2025-06-01`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.sectionID == "" {
+				return fmt.Errorf("--section-id is required (the homework API requires a section)\n\n  Tip: use 'life-ustc section homework list <section-id>' for an alternative")
+			}
 			return runMyHomeworkList(cmd, opts)
 		},
 	}
-	listCmd.Flags().BoolVar(&opts.done, "done", false, "Show only completed homeworks")
-	listCmd.Flags().BoolVar(&opts.pending, "pending", false, "Show only pending homeworks")
-	listCmd.Flags().StringVar(&opts.before, "before", "", "Show homeworks due before this date (ISO 8601)")
-	listCmd.Flags().StringVar(&opts.after, "after", "", "Show homeworks due after this date (ISO 8601)")
-	cmdutil.AddListFlags(listCmd, &opts.page, &opts.limit)
-	cmd.AddCommand(listCmd)
-	cmd.AddCommand(newCmdComplete())
+	addMyHomeworkListFlags(cmd, &opts)
 	return cmd
+}
+
+func addMyHomeworkListFlags(cmd *cobra.Command, opts *myHomeworkListOpts) {
+	cmd.Flags().StringVar(&opts.sectionID, "section-id", "", "Section ID (required)")
+	cmd.Flags().BoolVar(&opts.done, "done", false, "Show only completed homeworks")
+	cmd.Flags().BoolVar(&opts.pending, "pending", false, "Show only pending homeworks")
+	cmd.Flags().StringVar(&opts.before, "before", "", "Show homeworks due before this date (ISO 8601)")
+	cmd.Flags().StringVar(&opts.after, "after", "", "Show homeworks due after this date (ISO 8601)")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
 }
 
 func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
@@ -222,7 +230,7 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
+	params := url.Values{"sectionId": {opts.sectionID}}
 	if opts.done {
 		params.Set("isCompleted", "true")
 	}
@@ -240,14 +248,12 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 	if err != nil {
 		return err
 	}
-	_, rows, total, pg := cmdutil.ExtractList(data)
+	_, rows, total, pg := cmdutil.ExtractList(data, "homeworks")
 	output.OutputList(data, rows, []output.Column{
 		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
-		{Header: "Section", Key: "section.code"},
 		{Header: "Due", Key: "submissionDueAt"},
 		{Header: "Major", Key: "isMajor"},
-		{Header: "Done", Key: "isCompleted"},
 	}, total, pg)
 	return nil
 }
@@ -279,7 +285,7 @@ func newCmdList() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, rows, total, pg := cmdutil.ExtractList(data)
+			_, rows, total, pg := cmdutil.ExtractList(data, "homeworks")
 			output.OutputList(data, rows, []output.Column{
 				{Header: "ID", Key: "id"},
 				{Header: "Title", Key: "title"},

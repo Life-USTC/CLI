@@ -96,6 +96,7 @@ func newCmdLogin() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&useDeviceCode, "device", false, "Use device code flow (no browser redirect needed)")
+	cmd.Flags().BoolVar(&useDeviceCode, "device-code", false, "Use device code flow (alias for --device)")
 
 	return cmd
 }

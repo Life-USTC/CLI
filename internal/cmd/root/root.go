@@ -40,6 +40,7 @@ func NewCmdRoot() *cobra.Command {
 		noColor bool
 		jq      string
 		verbose bool
+		jsonOut bool
 	)
 
 	cmd := &cobra.Command{
@@ -67,6 +68,9 @@ calendar, and uploads. All output supports --jq for scripting.`,
 			if server == "" {
 				server = config.GetDefaultServer()
 			}
+			if jsonOut {
+				format = "json"
+			}
 			output.Current.Format = format
 			output.Current.NoColor = noColor
 			output.Current.JQ = jq
@@ -88,6 +92,7 @@ calendar, and uploads. All output supports --jq for scripting.`,
 	cmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 	cmd.PersistentFlags().StringVar(&jq, "jq", "", "Filter JSON output with a jq expression")
 	cmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Show verbose output (API requests, timing)")
+	cmd.PersistentFlags().BoolVar(&jsonOut, "json", false, "Output as JSON (shorthand for --format json)")
 
 	// Command groups
 	cmd.AddGroup(

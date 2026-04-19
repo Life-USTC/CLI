@@ -14,6 +14,7 @@ import (
 )
 
 func NewCmdTeacher() *cobra.Command {
+	var opts teacherListOpts
 	cmd := &cobra.Command{
 		Use:   "teacher [command]",
 		Short: "Browse teachers",
@@ -22,15 +23,16 @@ func NewCmdTeacher() *cobra.Command {
   life-ustc teacher
 
   # Search teachers by name
-  life-ustc teacher list -s "zhang"
+  life-ustc teacher -s "zhang"
 
   # View a specific teacher
   life-ustc teacher view <teacher-id>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runTeacherList(cmd, teacherListOpts{})
+			return runTeacherList(cmd, opts)
 		},
 	}
+	addTeacherListFlags(cmd, &opts)
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdView())
 	cmd.AddCommand(comment.NewCmdCommentFor("teacher"))
@@ -73,6 +75,12 @@ func runTeacherList(cmd *cobra.Command, opts teacherListOpts) error {
 	return nil
 }
 
+func addTeacherListFlags(cmd *cobra.Command, opts *teacherListOpts) {
+	cmd.Flags().StringVar(&opts.departmentID, "department-id", "", "Department ID")
+	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+}
+
 func newCmdList() *cobra.Command {
 	var opts teacherListOpts
 	cmd := &cobra.Command{
@@ -83,9 +91,7 @@ func newCmdList() *cobra.Command {
 			return runTeacherList(cmd, opts)
 		},
 	}
-	cmd.Flags().StringVar(&opts.departmentID, "department-id", "", "Department ID")
-	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
-	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+	addTeacherListFlags(cmd, &opts)
 	return cmd
 }
 

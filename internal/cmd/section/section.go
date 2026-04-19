@@ -18,6 +18,7 @@ import (
 )
 
 func NewCmdSection() *cobra.Command {
+	var opts sectionListOpts
 	cmd := &cobra.Command{
 		Use:   "section [command]",
 		Short: "Browse class sections",
@@ -26,15 +27,16 @@ func NewCmdSection() *cobra.Command {
   life-ustc section
 
   # Search sections by keyword
-  life-ustc section list -s "calculus"
+  life-ustc section -s "calculus"
 
   # View a specific section
   life-ustc section view <jw-id>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSectionList(cmd, sectionListOpts{})
+			return runSectionList(cmd, opts)
 		},
 	}
+	addSectionListFlags(cmd, &opts)
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdView())
 	cmd.AddCommand(newCmdSchedules())
@@ -97,6 +99,16 @@ func runSectionList(cmd *cobra.Command, opts sectionListOpts) error {
 	return nil
 }
 
+func addSectionListFlags(cmd *cobra.Command, opts *sectionListOpts) {
+	cmd.Flags().StringVar(&opts.courseID, "course-id", "", "Course ID")
+	cmd.Flags().StringVar(&opts.semesterID, "semester-id", "", "Semester ID")
+	cmd.Flags().StringVar(&opts.campusID, "campus-id", "", "Campus ID")
+	cmd.Flags().StringVar(&opts.teacherID, "teacher-id", "", "Teacher ID")
+	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
+	cmd.Flags().StringVar(&opts.ids, "ids", "", "Comma-separated section IDs")
+	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+}
+
 func newCmdList() *cobra.Command {
 	var opts sectionListOpts
 	cmd := &cobra.Command{
@@ -107,13 +119,7 @@ func newCmdList() *cobra.Command {
 			return runSectionList(cmd, opts)
 		},
 	}
-	cmd.Flags().StringVar(&opts.courseID, "course-id", "", "Course ID")
-	cmd.Flags().StringVar(&opts.semesterID, "semester-id", "", "Semester ID")
-	cmd.Flags().StringVar(&opts.campusID, "campus-id", "", "Campus ID")
-	cmd.Flags().StringVar(&opts.teacherID, "teacher-id", "", "Teacher ID")
-	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
-	cmd.Flags().StringVar(&opts.ids, "ids", "", "Comma-separated section IDs")
-	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
+	addSectionListFlags(cmd, &opts)
 	return cmd
 }
 
