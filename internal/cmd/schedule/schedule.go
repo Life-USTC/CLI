@@ -16,9 +16,9 @@ var weekdays = map[string]string{
 }
 
 type scheduleListOpts struct {
-	sectionID, teacherID, dateFrom, dateTo string
-	weekday                                int
-	page, limit                            int
+	sectionID, teacherID, roomID, dateFrom, dateTo string
+	weekday                                        int
+	page, limit                                    int
 }
 
 func NewCmdSchedule() *cobra.Command {
@@ -45,6 +45,7 @@ func NewCmdSchedule() *cobra.Command {
 func addScheduleListFlags(cmd *cobra.Command, opts *scheduleListOpts) {
 	cmd.Flags().StringVar(&opts.sectionID, "section-id", "", "Section ID")
 	cmd.Flags().StringVar(&opts.teacherID, "teacher-id", "", "Teacher ID")
+	cmd.Flags().StringVar(&opts.roomID, "room-id", "", "Room ID")
 	cmd.Flags().StringVar(&opts.dateFrom, "date-from", "", "Start date")
 	cmd.Flags().StringVar(&opts.dateTo, "date-to", "", "End date")
 	cmd.Flags().IntVar(&opts.weekday, "weekday", 0, "Weekday (1=Mon, 7=Sun)")
@@ -62,6 +63,9 @@ func runScheduleList(cmd *cobra.Command, opts scheduleListOpts) error {
 	}
 	if opts.teacherID != "" {
 		params.Set("teacherId", opts.teacherID)
+	}
+	if opts.roomID != "" {
+		params.Set("roomId", opts.roomID)
 	}
 	if opts.dateFrom != "" {
 		params.Set("dateFrom", opts.dateFrom)

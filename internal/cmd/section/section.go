@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -49,14 +48,15 @@ func NewCmdSection() *cobra.Command {
 }
 
 type sectionListOpts struct {
-	courseID   string
-	semesterID string
-	campusID  string
-	teacherID string
-	search    string
-	ids       string
-	page      int
-	limit     int
+	courseID      string
+	semesterID   string
+	campusID     string
+	departmentID string
+	teacherID    string
+	search       string
+	ids          string
+	page         int
+	limit        int
 }
 
 func runSectionList(cmd *cobra.Command, opts sectionListOpts) error {
@@ -73,6 +73,9 @@ func runSectionList(cmd *cobra.Command, opts sectionListOpts) error {
 	}
 	if opts.campusID != "" {
 		params.Set("campusId", opts.campusID)
+	}
+	if opts.departmentID != "" {
+		params.Set("departmentId", opts.departmentID)
 	}
 	if opts.teacherID != "" {
 		params.Set("teacherId", opts.teacherID)
@@ -103,6 +106,7 @@ func addSectionListFlags(cmd *cobra.Command, opts *sectionListOpts) {
 	cmd.Flags().StringVar(&opts.courseID, "course-id", "", "Course ID")
 	cmd.Flags().StringVar(&opts.semesterID, "semester-id", "", "Semester ID")
 	cmd.Flags().StringVar(&opts.campusID, "campus-id", "", "Campus ID")
+	cmd.Flags().StringVar(&opts.departmentID, "department-id", "", "Department ID")
 	cmd.Flags().StringVar(&opts.teacherID, "teacher-id", "", "Teacher ID")
 	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
 	cmd.Flags().StringVar(&opts.ids, "ids", "", "Comma-separated section IDs")
@@ -263,7 +267,7 @@ func newCmdMatchCodes() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"codes": strings.Join(args, ",")}
+			body := map[string]any{"codes": args}
 			if semesterID != "" {
 				body["semesterId"] = semesterID
 			}
@@ -271,13 +275,22 @@ func newCmdMatchCodes() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, rows, total, pg := cmdutil.ExtractList(data)
+			if output.IsJSON() {
+				output.JSON(data)
+				return nil
+			}
+			_, rows, total, pg := cmdutil.ExtractList(data, "sections")
 			output.OutputList(data, rows, []output.Column{
 				{Header: "ID", Key: "id"},
 				{Header: "Code", Key: "code"},
-				{Header: "Course", Key: "course.namePrimary"},
-				{Header: "Semester", Key: "semester.name"},
+				{Header: "Course", Key: "course.nameCn"},
+				{Header: "Semester", Key: "semester.nameCn"},
 			}, total, pg)
+			m := cmdutil.AsMap(data)
+			if unmatched, ok := m["unmatchedCodes"].([]any); ok && len(unmatched) > 0 {
+				fmt.Println()
+				output.Warning(fmt.Sprintf("%d code(s) not found: %v", len(unmatched), unmatched))
+			}
 			return nil
 		},
 	}

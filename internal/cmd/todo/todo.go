@@ -3,7 +3,6 @@ package todo
 import (
 	"bufio"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -93,32 +92,47 @@ func runTodoList(cmd *cobra.Command, opts todoListOpts) error {
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
-	if opts.done {
-		params.Set("isCompleted", "true")
-	}
-	if opts.pending {
-		params.Set("isCompleted", "false")
-	}
-	if opts.priority != "" {
-		params.Set("priority", opts.priority)
-	}
-	if opts.before != "" {
-		params.Set("dueBefore", opts.before)
-	}
-	if opts.after != "" {
-		params.Set("dueAfter", opts.after)
-	}
-	if opts.sort != "" {
-		params.Set("sort", opts.sort)
-	}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-
-	data, err := c.Get("/api/todos", params)
+	data, err := c.Get("/api/todos", nil)
 	if err != nil {
 		return err
 	}
 	_, rows, total, pg := cmdutil.ExtractList(data, "todos")
+
+	// Client-side filtering (the todo API has no query params)
+	var filtered []map[string]any
+	for _, row := range rows {
+		if opts.done {
+			if v, _ := row["completed"].(bool); !v {
+				continue
+			}
+		}
+		if opts.pending {
+			if v, _ := row["completed"].(bool); v {
+				continue
+			}
+		}
+		if opts.priority != "" {
+			if p, _ := row["priority"].(string); p != opts.priority {
+				continue
+			}
+		}
+		if opts.before != "" {
+			if due, _ := row["dueAt"].(string); due == "" || due > opts.before {
+				continue
+			}
+		}
+		if opts.after != "" {
+			if due, _ := row["dueAt"].(string); due == "" || due < opts.after {
+				continue
+			}
+		}
+		filtered = append(filtered, row)
+	}
+	if opts.done || opts.pending || opts.priority != "" || opts.before != "" || opts.after != "" {
+		rows = filtered
+		total = len(rows)
+	}
+
 	output.OutputList(data, rows, []output.Column{
 		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
@@ -245,10 +259,10 @@ func newCmdUpdate() *cobra.Command {
 				body["dueAt"] = due
 			}
 			if completed {
-				body["isCompleted"] = true
+				body["completed"] = true
 			}
 			if notCompleted {
-				body["isCompleted"] = false
+				body["completed"] = false
 			}
 			if len(body) == 0 {
 				return fmt.Errorf("nothing to update — specify at least one flag (e.g. --title, --completed)")

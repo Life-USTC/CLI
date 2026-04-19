@@ -107,7 +107,7 @@ func newCmdSectionList() *cobra.Command {
 func newCmdSectionCreate() *cobra.Command {
 	var (
 		title, desc, publishedAt, submissionStart, submissionDue string
-		major                                                    bool
+		major, requiresTeam                                      bool
 	)
 	cmd := &cobra.Command{
 		Use:     "create <section-id>",
@@ -148,6 +148,9 @@ func newCmdSectionCreate() *cobra.Command {
 			if major {
 				body["isMajor"] = true
 			}
+			if requiresTeam {
+				body["requiresTeam"] = true
+			}
 			data, err := c.Post("/api/homeworks", body)
 			if err != nil {
 				return err
@@ -164,6 +167,7 @@ func newCmdSectionCreate() *cobra.Command {
 	cmd.Flags().StringVar(&submissionStart, "submission-start", "", "Submission start date")
 	cmd.Flags().StringVar(&submissionDue, "submission-due", "", "Submission due date")
 	cmd.Flags().BoolVar(&major, "major", false, "Major assignment")
+	cmd.Flags().BoolVar(&requiresTeam, "requires-team", false, "Requires a team submission")
 	return cmd
 }
 
@@ -415,7 +419,7 @@ func newCmdList() *cobra.Command {
 func newCmdCreate() *cobra.Command {
 	var (
 		sectionID, title, desc, publishedAt, submissionStart, submissionDue string
-		major                                                               bool
+		major, requiresTeam                                                 bool
 	)
 	cmd := &cobra.Command{
 		Use:     "create",
@@ -460,6 +464,9 @@ func newCmdCreate() *cobra.Command {
 			if major {
 				body["isMajor"] = true
 			}
+			if requiresTeam {
+				body["requiresTeam"] = true
+			}
 			data, err := c.Post("/api/homeworks", body)
 			if err != nil {
 				return err
@@ -477,13 +484,14 @@ func newCmdCreate() *cobra.Command {
 	cmd.Flags().StringVar(&submissionStart, "submission-start", "", "Submission start date")
 	cmd.Flags().StringVar(&submissionDue, "submission-due", "", "Submission due date")
 	cmd.Flags().BoolVar(&major, "major", false, "Major assignment")
+	cmd.Flags().BoolVar(&requiresTeam, "requires-team", false, "Requires a team submission")
 	return cmd
 }
 
 func newCmdUpdate() *cobra.Command {
 	var (
 		title, publishedAt, submissionStart, submissionDue string
-		major, notMajor                                    bool
+		major, notMajor, requiresTeam, noTeam             bool
 	)
 	cmd := &cobra.Command{
 		Use:   "update <homework-id>",
@@ -513,6 +521,12 @@ func newCmdUpdate() *cobra.Command {
 			if notMajor {
 				body["isMajor"] = false
 			}
+			if requiresTeam {
+				body["requiresTeam"] = true
+			}
+			if noTeam {
+				body["requiresTeam"] = false
+			}
 			if len(body) == 0 {
 				return fmt.Errorf("nothing to update — specify at least one flag")
 			}
@@ -530,6 +544,8 @@ func newCmdUpdate() *cobra.Command {
 	cmd.Flags().StringVar(&publishedAt, "published-at", "", "Publish date")
 	cmd.Flags().StringVar(&submissionStart, "submission-start", "", "Submission start")
 	cmd.Flags().StringVar(&submissionDue, "submission-due", "", "Submission due")
+	cmd.Flags().BoolVar(&requiresTeam, "requires-team", false, "Mark as requiring team")
+	cmd.Flags().BoolVar(&noTeam, "no-team", false, "Mark as not requiring team")
 	return cmd
 }
 
@@ -576,7 +592,7 @@ func newCmdComplete() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"isCompleted": !undo}
+			body := map[string]any{"completed": !undo}
 			_, err = c.Put(fmt.Sprintf("/api/homeworks/%s/completion", args[0]), body)
 			if err != nil {
 				return err

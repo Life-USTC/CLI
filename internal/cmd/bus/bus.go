@@ -16,6 +16,7 @@ import (
 func NewCmdBus() *cobra.Command {
 	var (
 		origin, destination, dayType, now string
+		showDeparted, includeAll          bool
 		limit                             int
 	)
 	cmd := &cobra.Command{
@@ -26,58 +27,78 @@ func NewCmdBus() *cobra.Command {
   life-ustc bus
 
   # Filter by route
-  life-ustc bus query --from east --to west
+  life-ustc bus query --from 1 --to 2
+
+  # Show departed trips too
+  life-ustc bus --show-departed
 
   # Show saved preferences
   life-ustc bus preferences`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
-			if err != nil {
-				return err
-			}
-			params := url.Values{}
-			if origin != "" {
-				params.Set("from", origin)
-			}
-			if destination != "" {
-				params.Set("to", destination)
-			}
-			if dayType != "" {
-				params.Set("dayType", dayType)
-			}
-			if now != "" {
-				params.Set("now", now)
-			}
-			if limit > 0 {
-				params.Set("limit", cmdutil.Itoa(limit))
-			}
-			data, err := c.Get("/api/bus", params)
-			if err != nil {
-				return err
-			}
-			if output.IsJSON() {
-				output.JSON(data)
-				return nil
-			}
-			renderBus(cmdutil.AsMap(data))
-			return nil
+			return runBusQuery(cmd, origin, destination, dayType, now, showDeparted, includeAll, limit)
 		},
 	}
-	cmd.Flags().StringVar(&origin, "from", "", "Origin campus")
-	cmd.Flags().StringVar(&destination, "to", "", "Destination campus")
-	cmd.Flags().StringVar(&dayType, "day-type", "", "Day type filter")
-	cmd.Flags().StringVar(&now, "now", "", "Override current time (ISO 8601)")
-	cmd.Flags().IntVar(&limit, "limit", 0, "Max trips")
+	addBusQueryFlags(cmd, &origin, &destination, &dayType, &now, &showDeparted, &includeAll, &limit)
 	cmd.AddCommand(newCmdQuery())
 	cmd.AddCommand(newCmdPreferences())
 	cmd.AddCommand(newCmdSetPreferences())
 	return cmd
 }
 
+func addBusQueryFlags(cmd *cobra.Command, origin, destination, dayType, now *string, showDeparted, includeAll *bool, limit *int) {
+	cmd.Flags().StringVar(origin, "from", "", "Origin campus ID")
+	cmd.Flags().StringVar(destination, "to", "", "Destination campus ID")
+	cmd.Flags().StringVar(dayType, "day-type", "", "Day type: auto, weekday, weekend")
+	cmd.Flags().StringVar(now, "now", "", "Override current time (ISO 8601)")
+	cmd.Flags().BoolVar(showDeparted, "show-departed", false, "Show already-departed trips")
+	cmd.Flags().BoolVar(includeAll, "all", false, "Include all trips (not just upcoming)")
+	cmd.Flags().IntVar(limit, "limit", 0, "Max trips to show")
+}
+
+func runBusQuery(cmd *cobra.Command, origin, destination, dayType, now string, showDeparted, includeAll bool, limit int) error {
+	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	if err != nil {
+		return err
+	}
+	params := url.Values{}
+	if origin != "" {
+		params.Set("originCampusId", origin)
+	}
+	if destination != "" {
+		params.Set("destinationCampusId", destination)
+	}
+	if dayType != "" {
+		params.Set("dayType", dayType)
+	}
+	if now != "" {
+		params.Set("now", now)
+	}
+	if showDeparted {
+		params.Set("showDepartedTrips", "true")
+	}
+	if includeAll {
+		params.Set("includeAllTrips", "true")
+	}
+	if limit > 0 {
+		params.Set("limit", cmdutil.Itoa(limit))
+	}
+	data, err := c.Get("/api/bus", params)
+	if err != nil {
+		return err
+	}
+	if output.IsJSON() {
+		output.JSON(data)
+		return nil
+	}
+	renderBus(cmdutil.AsMap(data))
+	return nil
+}
+
 func newCmdQuery() *cobra.Command {
 	var (
 		origin, destination, dayType, now string
+		showDeparted, includeAll          bool
 		limit                             int
 	)
 	cmd := &cobra.Command{
@@ -87,46 +108,16 @@ func newCmdQuery() *cobra.Command {
 		Example: `  # Show all upcoming buses
   life-ustc bus query
 
-  # Filter by origin and destination
-  life-ustc bus query --from east --to west`,
+  # Filter by origin and destination campus ID
+  life-ustc bus query --from 1 --to 2
+
+  # Show departed trips
+  life-ustc bus query --show-departed`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
-			if err != nil {
-				return err
-			}
-			params := url.Values{}
-			if origin != "" {
-				params.Set("from", origin)
-			}
-			if destination != "" {
-				params.Set("to", destination)
-			}
-			if dayType != "" {
-				params.Set("dayType", dayType)
-			}
-			if now != "" {
-				params.Set("now", now)
-			}
-			if limit > 0 {
-				params.Set("limit", cmdutil.Itoa(limit))
-			}
-			data, err := c.Get("/api/bus", params)
-			if err != nil {
-				return err
-			}
-			if output.IsJSON() {
-				output.JSON(data)
-				return nil
-			}
-			renderBus(cmdutil.AsMap(data))
-			return nil
+			return runBusQuery(cmd, origin, destination, dayType, now, showDeparted, includeAll, limit)
 		},
 	}
-	cmd.Flags().StringVar(&origin, "from", "", "Origin campus")
-	cmd.Flags().StringVar(&destination, "to", "", "Destination campus")
-	cmd.Flags().StringVar(&dayType, "day-type", "", "Day type filter")
-	cmd.Flags().StringVar(&now, "now", "", "Override current time (ISO 8601)")
-	cmd.Flags().IntVar(&limit, "limit", 0, "Max trips")
+	addBusQueryFlags(cmd, &origin, &destination, &dayType, &now, &showDeparted, &includeAll, &limit)
 	return cmd
 }
 
@@ -279,6 +270,7 @@ func joinStrings(ss []string, sep string) string {
 func newCmdPreferences() *cobra.Command {
 	return &cobra.Command{
 		Use:   "preferences",
+		Aliases: []string{"prefs"},
 		Short: "Show your bus preferences",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
@@ -290,9 +282,11 @@ func newCmdPreferences() *cobra.Command {
 				return err
 			}
 			output.OutputDetail(data, []output.FieldDef{
-				{Key: "defaultFrom", Label: "Default from"},
-				{Key: "defaultTo", Label: "Default to"},
-				{Key: "notifications", Label: "Notifications"},
+				{Key: "preferredOriginCampusId", Label: "Preferred origin"},
+				{Key: "preferredDestinationCampusId", Label: "Preferred destination"},
+				{Key: "favoriteCampusIds", Label: "Favorite campuses"},
+				{Key: "favoriteRouteIds", Label: "Favorite routes"},
+				{Key: "showDepartedTrips", Label: "Show departed"},
 			}, "Bus preferences")
 			return nil
 		},
@@ -300,18 +294,46 @@ func newCmdPreferences() *cobra.Command {
 }
 
 func newCmdSetPreferences() *cobra.Command {
-	return &cobra.Command{
-		Use:   "set-preferences <json>",
-		Short: "Update bus preferences (pass JSON body)",
-		Args:  cobra.ExactArgs(1),
+	var (
+		origin, destination int
+		showDeparted        bool
+		rawJSON             string
+	)
+	cmd := &cobra.Command{
+		Use:   "set-preferences",
+		Short: "Update bus preferences",
+		Example: `  # Set preferred origin and destination
+  life-ustc bus set-preferences --origin 1 --destination 2
+
+  # Toggle show departed trips
+  life-ustc bus set-preferences --show-departed
+
+  # Set from raw JSON
+  life-ustc bus set-preferences --json '{"showDepartedTrips":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
 			var body map[string]any
-			if err := json.Unmarshal([]byte(args[0]), &body); err != nil {
-				return fmt.Errorf("invalid JSON: %w", err)
+			if rawJSON != "" {
+				if err := json.Unmarshal([]byte(rawJSON), &body); err != nil {
+					return fmt.Errorf("invalid JSON: %w", err)
+				}
+			} else {
+				body = map[string]any{}
+				if cmd.Flags().Changed("origin") {
+					body["preferredOriginCampusId"] = origin
+				}
+				if cmd.Flags().Changed("destination") {
+					body["preferredDestinationCampusId"] = destination
+				}
+				if cmd.Flags().Changed("show-departed") {
+					body["showDepartedTrips"] = showDeparted
+				}
+				if len(body) == 0 {
+					return fmt.Errorf("specify at least one flag (--origin, --destination, --show-departed) or use --json")
+				}
 			}
 			_, err = c.Post("/api/bus/preferences", body)
 			if err != nil {
@@ -321,4 +343,9 @@ func newCmdSetPreferences() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().IntVar(&origin, "origin", 0, "Preferred origin campus ID")
+	cmd.Flags().IntVar(&destination, "destination", 0, "Preferred destination campus ID")
+	cmd.Flags().BoolVar(&showDeparted, "show-departed", false, "Show departed trips by default")
+	cmd.Flags().StringVar(&rawJSON, "raw-json", "", "Set preferences from raw JSON body")
+	return cmd
 }

@@ -44,6 +44,7 @@ type courseListOpts struct {
 	search           string
 	educationLevelID string
 	categoryID       string
+	classTypeID      string
 	page             int
 	limit            int
 }
@@ -62,6 +63,9 @@ func runCourseList(cmd *cobra.Command, opts courseListOpts) error {
 	}
 	if opts.categoryID != "" {
 		params.Set("categoryId", opts.categoryID)
+	}
+	if opts.classTypeID != "" {
+		params.Set("classTypeId", opts.classTypeID)
 	}
 	cmdutil.ApplyListParams(params, opts.page, opts.limit)
 	data, err := c.Get("/api/courses", params)
@@ -83,6 +87,7 @@ func addCourseListFlags(cmd *cobra.Command, opts *courseListOpts) {
 	cmd.Flags().StringVarP(&opts.search, "search", "s", "", "Search query")
 	cmd.Flags().StringVar(&opts.educationLevelID, "education-level-id", "", "Education level ID")
 	cmd.Flags().StringVar(&opts.categoryID, "category-id", "", "Category ID")
+	cmd.Flags().StringVar(&opts.classTypeID, "class-type-id", "", "Class type ID")
 	cmdutil.AddListFlags(cmd, &opts.page, &opts.limit)
 }
 
