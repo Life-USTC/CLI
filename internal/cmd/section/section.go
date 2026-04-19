@@ -11,6 +11,9 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	"github.com/Life-USTC/CLI/internal/cmd/comment"
+	"github.com/Life-USTC/CLI/internal/cmd/description"
+	"github.com/Life-USTC/CLI/internal/cmd/homework"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -24,6 +27,9 @@ func NewCmdSection() *cobra.Command {
 	cmd.AddCommand(newCmdSchedules())
 	cmd.AddCommand(newCmdCalendar())
 	cmd.AddCommand(newCmdMatchCodes())
+	cmd.AddCommand(homework.NewCmdSectionHomework())
+	cmd.AddCommand(comment.NewCmdCommentFor("section"))
+	cmd.AddCommand(description.NewCmdDescriptionFor("section"))
 	return cmd
 }
 

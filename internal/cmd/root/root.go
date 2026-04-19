@@ -1,26 +1,23 @@
 package root
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/Life-USTC/CLI/internal/cmd/admin"
 	"github.com/Life-USTC/CLI/internal/cmd/authcmd"
 	"github.com/Life-USTC/CLI/internal/cmd/bus"
-	"github.com/Life-USTC/CLI/internal/cmd/calendar"
-	"github.com/Life-USTC/CLI/internal/cmd/comment"
 	"github.com/Life-USTC/CLI/internal/cmd/configcmd"
 	"github.com/Life-USTC/CLI/internal/cmd/course"
-	"github.com/Life-USTC/CLI/internal/cmd/description"
-	"github.com/Life-USTC/CLI/internal/cmd/homework"
 	"github.com/Life-USTC/CLI/internal/cmd/me"
 	"github.com/Life-USTC/CLI/internal/cmd/metadata"
 	"github.com/Life-USTC/CLI/internal/cmd/schedule"
 	"github.com/Life-USTC/CLI/internal/cmd/section"
 	"github.com/Life-USTC/CLI/internal/cmd/semester"
 	"github.com/Life-USTC/CLI/internal/cmd/teacher"
-	"github.com/Life-USTC/CLI/internal/cmd/todo"
-	"github.com/Life-USTC/CLI/internal/cmd/upload"
 	"github.com/Life-USTC/CLI/internal/config"
 	"github.com/Life-USTC/CLI/internal/output"
 )
@@ -68,15 +65,49 @@ func NewCmdRoot() *cobra.Command {
 	cmd.AddCommand(teacher.NewCmdTeacher())
 	cmd.AddCommand(schedule.NewCmdSchedule())
 	cmd.AddCommand(bus.NewCmdBus())
-	cmd.AddCommand(todo.NewCmdTodo())
-	cmd.AddCommand(homework.NewCmdHomework())
-	cmd.AddCommand(comment.NewCmdComment())
-	cmd.AddCommand(description.NewCmdDescription())
-	cmd.AddCommand(upload.NewCmdUpload())
-	cmd.AddCommand(calendar.NewCmdCalendar())
 	cmd.AddCommand(metadata.NewCmdMetadata())
 	cmd.AddCommand(admin.NewCmdAdmin())
 	cmd.AddCommand(configcmd.NewCmdConfig())
+	cmd.AddCommand(newCmdCompletion())
 
+	return cmd
+}
+
+func newCmdCompletion() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "completion <shell>",
+		Short: "Generate shell completion scripts",
+		Long: `Generate shell completion scripts for life-ustc.
+
+To load completions:
+
+  bash:
+    source <(life-ustc completion bash)
+
+  zsh:
+    life-ustc completion zsh > "${fpath[1]}/_life-ustc"
+
+  fish:
+    life-ustc completion fish | source
+
+  powershell:
+    life-ustc completion powershell | Out-String | Invoke-Expression`,
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				return cmd.Root().GenBashCompletion(os.Stdout)
+			case "zsh":
+				return cmd.Root().GenZshCompletion(os.Stdout)
+			case "fish":
+				return cmd.Root().GenFishCompletion(os.Stdout, true)
+			case "powershell":
+				return cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+			default:
+				return fmt.Errorf("unsupported shell: %s (use bash, zsh, fish, or powershell)", args[0])
+			}
+		},
+	}
 	return cmd
 }

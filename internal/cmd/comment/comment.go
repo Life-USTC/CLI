@@ -62,6 +62,95 @@ func NewCmdComment() *cobra.Command {
 	return cmd
 }
 
+// NewCmdCommentFor creates a "comment" command tree scoped to a target type.
+// list and create take the target ID as a positional argument.
+func NewCmdCommentFor(targetType string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "comment <command>",
+		Short: fmt.Sprintf("Comments on this %s", targetType),
+	}
+	cmd.AddCommand(newCmdListFor(targetType))
+	cmd.AddCommand(newCmdView())
+	cmd.AddCommand(newCmdCreateFor(targetType))
+	cmd.AddCommand(newCmdUpdate())
+	cmd.AddCommand(newCmdDelete())
+	cmd.AddCommand(newCmdReact())
+	return cmd
+}
+
+func newCmdListFor(targetType string) *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("list <%s-id>", targetType),
+		Short: fmt.Sprintf("List comments for a %s", targetType),
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			if err != nil {
+				return err
+			}
+			params := url.Values{"targetType": {targetType}, "targetId": {args[0]}}
+			data, err := c.Get("/api/comments", params)
+			if err != nil {
+				return err
+			}
+			_, rows, total, pg := cmdutil.ExtractList(data, "comments")
+			output.OutputList(data, rows, []output.Column{
+				{Header: "Body", Key: "body"},
+				{Header: "Visibility", Key: "visibility"},
+				{Header: "Created", Key: "createdAt"},
+			}, total, pg)
+			return nil
+		},
+	}
+}
+
+func newCmdCreateFor(targetType string) *cobra.Command {
+	var (
+		body, visibility, parentID string
+		anonymous                  bool
+	)
+	cmd := &cobra.Command{
+		Use:   fmt.Sprintf("create <%s-id>", targetType),
+		Short: fmt.Sprintf("Post a comment on a %s", targetType),
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if body == "" {
+				if !isInteractive() {
+					return fmt.Errorf("--body is required in non-interactive mode")
+				}
+				body = promptText("Comment body")
+			}
+			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			if err != nil {
+				return err
+			}
+			payload := map[string]any{
+				"targetType":  targetType,
+				"targetId":    args[0],
+				"body":        body,
+				"visibility":  visibility,
+				"isAnonymous": anonymous,
+			}
+			if parentID != "" {
+				payload["parentId"] = parentID
+			}
+			data, err := c.Post("/api/comments", payload)
+			if err != nil {
+				return err
+			}
+			m := cmdutil.AsMap(data)
+			id, _ := m["id"].(string)
+			output.Success(fmt.Sprintf("Comment created: %s", id))
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&body, "body", "b", "", "Comment body")
+	cmd.Flags().StringVar(&visibility, "visibility", "public", "Visibility (public, logged_in_only, anonymous)")
+	cmd.Flags().BoolVar(&anonymous, "anonymous", false, "Post anonymously")
+	cmd.Flags().StringVar(&parentID, "parent-id", "", "Reply to comment ID")
+	return cmd
+}
+
 func newCmdList() *cobra.Command {
 	var targetType, targetID, sectionID, teacherID string
 	cmd := &cobra.Command{

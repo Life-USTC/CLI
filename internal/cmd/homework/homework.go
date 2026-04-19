@@ -41,6 +41,157 @@ func NewCmdHomework() *cobra.Command {
 	return cmd
 }
 
+// NewCmdSectionHomework returns homework commands scoped to a section.
+// list and create take section-id as a positional argument.
+func NewCmdSectionHomework() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "homework <command>",
+		Short: "Manage section homeworks",
+	}
+	cmd.AddCommand(newCmdSectionList())
+	cmd.AddCommand(newCmdSectionCreate())
+	cmd.AddCommand(newCmdUpdate())
+	cmd.AddCommand(newCmdDelete())
+	return cmd
+}
+
+func newCmdSectionList() *cobra.Command {
+	var includeDeleted bool
+	cmd := &cobra.Command{
+		Use:   "list <section-id>",
+		Short: "List homeworks for a section",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			if err != nil {
+				return err
+			}
+			params := url.Values{"sectionId": {args[0]}}
+			if includeDeleted {
+				params.Set("includeDeleted", "true")
+			}
+			data, err := c.Get("/api/homeworks", params)
+			if err != nil {
+				return err
+			}
+			_, rows, total, pg := cmdutil.ExtractList(data)
+			output.OutputList(data, rows, []output.Column{
+				{Header: "Title", Key: "title"},
+				{Header: "Due", Key: "submissionDueAt"},
+				{Header: "Major", Key: "isMajor"},
+			}, total, pg)
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&includeDeleted, "include-deleted", false, "Include deleted")
+	return cmd
+}
+
+func newCmdSectionCreate() *cobra.Command {
+	var (
+		title, desc, publishedAt, submissionStart, submissionDue string
+		major                                                    bool
+	)
+	cmd := &cobra.Command{
+		Use:   "create <section-id>",
+		Short: "Create a homework for a section",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sectionID := args[0]
+			if title == "" {
+				if !isInteractive() {
+					return fmt.Errorf("--title is required in non-interactive mode")
+				}
+				title = promptText("Homework title")
+				if desc == "" {
+					desc = promptText("Description (optional)")
+				}
+				if submissionDue == "" {
+					submissionDue = promptText("Submission due (optional, ISO 8601)")
+				}
+			}
+			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			if err != nil {
+				return err
+			}
+			body := map[string]any{"sectionId": sectionID, "title": title}
+			if desc != "" {
+				body["description"] = desc
+			}
+			if publishedAt != "" {
+				body["publishedAt"] = publishedAt
+			}
+			if submissionStart != "" {
+				body["submissionStartAt"] = submissionStart
+			}
+			if submissionDue != "" {
+				body["submissionDueAt"] = submissionDue
+			}
+			if major {
+				body["isMajor"] = true
+			}
+			data, err := c.Post("/api/homeworks", body)
+			if err != nil {
+				return err
+			}
+			m := cmdutil.AsMap(data)
+			id, _ := m["id"].(string)
+			output.Success(fmt.Sprintf("Created homework %s", id))
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&title, "title", "t", "", "Title")
+	cmd.Flags().StringVar(&desc, "description", "", "Description")
+	cmd.Flags().StringVar(&publishedAt, "published-at", "", "Publish date (ISO 8601)")
+	cmd.Flags().StringVar(&submissionStart, "submission-start", "", "Submission start date")
+	cmd.Flags().StringVar(&submissionDue, "submission-due", "", "Submission due date")
+	cmd.Flags().BoolVar(&major, "major", false, "Major assignment")
+	return cmd
+}
+
+// NewCmdMyHomework returns personal homework commands (list + complete).
+// Running without a subcommand lists your homeworks.
+func NewCmdMyHomework() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "homework [command]",
+		Short: "View and manage your homeworks",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMyHomeworkList(cmd)
+		},
+	}
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List your homeworks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMyHomeworkList(cmd)
+		},
+	}
+	cmd.AddCommand(listCmd)
+	cmd.AddCommand(newCmdComplete())
+	return cmd
+}
+
+func runMyHomeworkList(cmd *cobra.Command) error {
+	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	if err != nil {
+		return err
+	}
+	data, err := c.Get("/api/homeworks", nil)
+	if err != nil {
+		return err
+	}
+	_, rows, total, pg := cmdutil.ExtractList(data)
+	output.OutputList(data, rows, []output.Column{
+		{Header: "Title", Key: "title"},
+		{Header: "Section", Key: "section.code"},
+		{Header: "Due", Key: "submissionDueAt"},
+		{Header: "Major", Key: "isMajor"},
+		{Header: "Done", Key: "isCompleted"},
+	}, total, pg)
+	return nil
+}
+
 func newCmdList() *cobra.Command {
 	var (
 		sectionID      string

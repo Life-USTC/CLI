@@ -4,14 +4,20 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Life-USTC/CLI/internal/api"
+	"github.com/Life-USTC/CLI/internal/cmd/calendar"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	"github.com/Life-USTC/CLI/internal/cmd/homework"
+	"github.com/Life-USTC/CLI/internal/cmd/todo"
+	"github.com/Life-USTC/CLI/internal/cmd/upload"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
 func NewCmdMe() *cobra.Command {
-	return &cobra.Command{
-		Use:   "me",
-		Short: "Show your profile",
+	cmd := &cobra.Command{
+		Use:   "me [command]",
+		Short: "Your personal hub",
+		Long:  "Show your profile or manage personal data (todos, homework, calendar, uploads).",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
@@ -31,4 +37,11 @@ func NewCmdMe() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.AddCommand(todo.NewCmdTodo())
+	cmd.AddCommand(homework.NewCmdMyHomework())
+	cmd.AddCommand(calendar.NewCmdCalendar())
+	cmd.AddCommand(upload.NewCmdUpload())
+
+	return cmd
 }

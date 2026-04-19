@@ -18,8 +18,12 @@ import (
 
 func NewCmdUpload() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "upload <command>",
+		Use:   "upload [command]",
 		Short: "Manage file uploads",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runUploadList(cmd)
+		},
 	}
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdFile())
@@ -29,41 +33,44 @@ func NewCmdUpload() *cobra.Command {
 	return cmd
 }
 
+func runUploadList(cmd *cobra.Command) error {
+	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	if err != nil {
+		return err
+	}
+	data, err := c.Get("/api/uploads", nil)
+	if err != nil {
+		return err
+	}
+	if output.IsJSON() {
+		output.JSON(data)
+		return nil
+	}
+	m := cmdutil.AsMap(data)
+	_, rows, _, _ := cmdutil.ExtractList(data)
+
+	if m != nil {
+		used, _ := m["totalSize"].(float64)
+		quota, _ := m["quota"].(float64)
+		if quota > 0 {
+			output.Dim(fmt.Sprintf("  Usage: %s / %s", humanSize(int64(used)), humanSize(int64(quota))))
+		}
+	}
+
+	output.Table(rows, []output.Column{
+		{Header: "Filename", Key: "filename"},
+		{Header: "Type", Key: "contentType"},
+		{Header: "Size", Key: "size"},
+	})
+	return nil
+}
+
 func newCmdList() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List your uploads",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
-			if err != nil {
-				return err
-			}
-			data, err := c.Get("/api/uploads", nil)
-			if err != nil {
-				return err
-			}
-			if output.IsJSON() {
-				output.JSON(data)
-				return nil
-			}
-			m := cmdutil.AsMap(data)
-			_, rows, _, _ := cmdutil.ExtractList(data)
-
-			// Show usage info
-			if m != nil {
-				used, _ := m["totalSize"].(float64)
-				quota, _ := m["quota"].(float64)
-				if quota > 0 {
-					output.Dim(fmt.Sprintf("  Usage: %s / %s", humanSize(int64(used)), humanSize(int64(quota))))
-				}
-			}
-
-			output.Table(rows, []output.Column{
-				{Header: "Filename", Key: "filename"},
-				{Header: "Type", Key: "contentType"},
-				{Header: "Size", Key: "size"},
-			})
-			return nil
+			return runUploadList(cmd)
 		},
 	}
 }

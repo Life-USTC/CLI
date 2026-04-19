@@ -48,8 +48,12 @@ func promptSelect(label string, choices []string) string {
 
 func NewCmdTodo() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "todo <command>",
+		Use:   "todo [command]",
 		Short: "Manage personal todos",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runTodoList(cmd)
+		},
 	}
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdCreate())
@@ -58,27 +62,31 @@ func NewCmdTodo() *cobra.Command {
 	return cmd
 }
 
+func runTodoList(cmd *cobra.Command) error {
+	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	if err != nil {
+		return err
+	}
+	data, err := c.Get("/api/todos", nil)
+	if err != nil {
+		return err
+	}
+	_, rows, total, pg := cmdutil.ExtractList(data)
+	output.OutputList(data, rows, []output.Column{
+		{Header: "Title", Key: "title"},
+		{Header: "Priority", Key: "priority"},
+		{Header: "Done", Key: "isCompleted"},
+		{Header: "Due", Key: "dueAt"},
+	}, total, pg)
+	return nil
+}
+
 func newCmdList() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List your todos",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
-			if err != nil {
-				return err
-			}
-			data, err := c.Get("/api/todos", nil)
-			if err != nil {
-				return err
-			}
-			_, rows, total, pg := cmdutil.ExtractList(data)
-			output.OutputList(data, rows, []output.Column{
-				{Header: "Title", Key: "title"},
-				{Header: "Priority", Key: "priority"},
-				{Header: "Done", Key: "isCompleted"},
-				{Header: "Due", Key: "dueAt"},
-			}, total, pg)
-			return nil
+			return runTodoList(cmd)
 		},
 	}
 }

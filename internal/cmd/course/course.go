@@ -8,6 +8,8 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	"github.com/Life-USTC/CLI/internal/cmd/comment"
+	"github.com/Life-USTC/CLI/internal/cmd/description"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -18,6 +20,8 @@ func NewCmdCourse() *cobra.Command {
 	}
 	cmd.AddCommand(newCmdList())
 	cmd.AddCommand(newCmdView())
+	cmd.AddCommand(comment.NewCmdCommentFor("course"))
+	cmd.AddCommand(description.NewCmdDescriptionFor("course"))
 	return cmd
 }
 
