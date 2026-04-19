@@ -1,15 +1,17 @@
 package bus
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -57,33 +59,41 @@ func addBusQueryFlags(cmd *cobra.Command, origin, destination, dayType, now *str
 }
 
 func runBusQuery(cmd *cobra.Command, origin, destination, dayType, now string, showDeparted, includeAll bool, limit int) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
+	params := &openapi.QueryBusParams{}
 	if origin != "" {
-		params.Set("originCampusId", origin)
+		params.OriginCampusId = &origin
 	}
 	if destination != "" {
-		params.Set("destinationCampusId", destination)
+		params.DestinationCampusId = &destination
 	}
 	if dayType != "" {
-		params.Set("dayType", dayType)
+		dt := openapi.QueryBusParamsDayType(dayType)
+		params.DayType = &dt
 	}
 	if now != "" {
-		params.Set("now", now)
+		t, err := time.Parse(time.RFC3339, now)
+		if err != nil {
+			return fmt.Errorf("invalid time format (expected RFC 3339): %w", err)
+		}
+		params.Now = &t
 	}
 	if showDeparted {
-		params.Set("showDepartedTrips", "true")
+		v := openapi.QueryBusParamsShowDepartedTripsTrue
+		params.ShowDepartedTrips = &v
 	}
 	if includeAll {
-		params.Set("includeAllTrips", "true")
+		v := openapi.QueryBusParamsIncludeAllTripsTrue
+		params.IncludeAllTrips = &v
 	}
 	if limit > 0 {
-		params.Set("limit", cmdutil.Itoa(limit))
+		l := cmdutil.Itoa(limit)
+		params.Limit = &l
 	}
-	data, err := c.Get("/api/bus", params)
+	data, err := api.ParseResponseRaw(c.QueryBus(api.Ctx(), params))
 	if err != nil {
 		return err
 	}
@@ -273,11 +283,11 @@ func newCmdPreferences() *cobra.Command {
 		Aliases: []string{"prefs"},
 		Short: "Show your bus preferences",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get("/api/bus/preferences", nil)
+			data, err := api.ParseResponseRaw(c.GetBusPreferences(api.Ctx()))
 			if err != nil {
 				return err
 			}
@@ -311,7 +321,7 @@ func newCmdSetPreferences() *cobra.Command {
   # Set from raw JSON
   life-ustc bus set-preferences --json '{"showDepartedTrips":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
@@ -335,7 +345,11 @@ func newCmdSetPreferences() *cobra.Command {
 					return fmt.Errorf("specify at least one flag (--origin, --destination, --show-departed) or use --json")
 				}
 			}
-			_, err = c.Post("/api/bus/preferences", body)
+			bodyBytes, err := json.Marshal(body)
+			if err != nil {
+				return fmt.Errorf("failed to encode body: %w", err)
+			}
+			_, err = api.ParseResponseRaw(c.SetBusPreferencesWithBody(api.Ctx(), "application/json", bytes.NewReader(bodyBytes)))
 			if err != nil {
 				return err
 			}

@@ -3,7 +3,6 @@ package admin
 import (
 	"bufio"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -58,16 +58,23 @@ func newCmdUserList() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List users",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			params := url.Values{}
+			params := &openapi.ListAdminUsersParams{}
 			if search != "" {
-				params.Set("search", search)
+				params.Search = &search
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/admin/users", params)
+			if page > 0 {
+				p := cmdutil.Itoa(page)
+				params.Page = &p
+			}
+			if limit > 0 {
+				l := cmdutil.Itoa(limit)
+				params.Limit = &l
+			}
+			data, err := api.ParseResponseRaw(c.ListAdminUsers(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -97,27 +104,34 @@ func newCmdUserUpdate() *cobra.Command {
 		Short: "Update a user",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{}
+			reqBody := openapi.UpdateAdminUserJSONRequestBody{}
+			hasUpdate := false
 			if name != "" {
-				body["name"] = name
+				reqBody.Name = &name
+				hasUpdate = true
 			}
 			if username != "" {
-				body["username"] = username
+				reqBody.Username = &username
+				hasUpdate = true
 			}
 			if admin {
-				body["isAdmin"] = true
+				t := true
+				reqBody.IsAdmin = &t
+				hasUpdate = true
 			}
 			if noAdmin {
-				body["isAdmin"] = false
+				f := false
+				reqBody.IsAdmin = &f
+				hasUpdate = true
 			}
-			if len(body) == 0 {
+			if !hasUpdate {
 				return fmt.Errorf("nothing to update — specify at least one flag")
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/admin/users/%s", args[0]), body)
+			_, err = api.ParseResponseRaw(c.UpdateAdminUser(api.Ctx(), args[0], reqBody))
 			if err != nil {
 				return err
 			}
@@ -144,19 +158,16 @@ func newCmdSuspension() *cobra.Command {
 }
 
 func newCmdSuspensionList() *cobra.Command {
-	var page, limit int
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List suspensions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			params := url.Values{}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/admin/suspensions", params)
+			data, err := api.ParseResponseRaw(c.ListAdminSuspensions(api.Ctx()))
 			if err != nil {
 				return err
 			}
@@ -171,7 +182,6 @@ func newCmdSuspensionList() *cobra.Command {
 			return nil
 		},
 	}
-	cmdutil.AddListFlags(cmd, &page, &limit)
 	return cmd
 }
 
@@ -182,21 +192,23 @@ func newCmdSuspensionCreate() *cobra.Command {
 		Aliases: []string{"new"},
 		Short:   "Suspend a user",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"userId": userID}
+			reqBody := openapi.CreateAdminSuspensionJSONRequestBody{
+				UserId: userID,
+			}
 			if reason != "" {
-				body["reason"] = reason
+				reqBody.Reason = &reason
 			}
 			if note != "" {
-				body["note"] = note
+				reqBody.Note = &note
 			}
 			if expiresAt != "" {
-				body["expiresAt"] = expiresAt
+				reqBody.ExpiresAt = &expiresAt
 			}
-			_, err = c.Post("/api/admin/suspensions", body)
+			_, err = api.ParseResponseRaw(c.CreateAdminSuspension(api.Ctx(), reqBody))
 			if err != nil {
 				return err
 			}
@@ -218,11 +230,11 @@ func newCmdSuspensionLift() *cobra.Command {
 		Short: "Lift a suspension",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/admin/suspensions/%s", args[0]), map[string]any{"lifted": true})
+			_, err = api.ParseResponseRaw(c.UpdateAdminSuspension(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}
@@ -244,22 +256,26 @@ func newCmdComment() *cobra.Command {
 
 func newCmdCommentList() *cobra.Command {
 	var status string
-	var page, limit int
+	var limit int
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List comments (admin)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			params := url.Values{}
+			params := &openapi.ListAdminCommentsParams{}
 			if status != "" {
-				params.Set("status", status)
+				s := openapi.ListAdminCommentsParamsStatus(status)
+				params.Status = &s
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/admin/comments", params)
+			if limit > 0 {
+				l := cmdutil.Itoa(limit)
+				params.Limit = &l
+			}
+			data, err := api.ParseResponseRaw(c.ListAdminComments(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -275,7 +291,7 @@ func newCmdCommentList() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&status, "status", "", "Status filter (active, softbanned, deleted, suspended)")
-	cmdutil.AddListFlags(cmd, &page, &limit)
+	cmd.Flags().IntVar(&limit, "limit", 0, "Limit results")
 	return cmd
 }
 
@@ -286,15 +302,17 @@ func newCmdCommentModerate() *cobra.Command {
 		Short: "Moderate a comment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"status": status}
-			if note != "" {
-				body["note"] = note
+			reqBody := openapi.ModerateAdminCommentJSONRequestBody{
+				Status: openapi.AdminModerateCommentRequestSchemaStatus(status),
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/admin/comments/%s", args[0]), body)
+			if note != "" {
+				reqBody.ModerationNote = &note
+			}
+			_, err = api.ParseResponseRaw(c.ModerateAdminComment(api.Ctx(), args[0], reqBody))
 			if err != nil {
 				return err
 			}
@@ -319,28 +337,33 @@ func newCmdDescription() *cobra.Command {
 
 func newCmdDescriptionList() *cobra.Command {
 	var targetType, hasContent, search string
-	var page, limit int
+	var limit int
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List descriptions (admin)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			params := url.Values{}
+			params := &openapi.ListAdminDescriptionsParams{}
 			if targetType != "" {
-				params.Set("targetType", targetType)
+				t := openapi.ListAdminDescriptionsParamsTargetType(targetType)
+				params.TargetType = &t
 			}
 			if hasContent != "" {
-				params.Set("hasContent", hasContent)
+				h := openapi.ListAdminDescriptionsParamsHasContent(hasContent)
+				params.HasContent = &h
 			}
 			if search != "" {
-				params.Set("search", search)
+				params.Search = &search
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/admin/descriptions", params)
+			if limit > 0 {
+				l := cmdutil.Itoa(limit)
+				params.Limit = &l
+			}
+			data, err := api.ParseResponseRaw(c.ListAdminDescriptions(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -358,7 +381,7 @@ func newCmdDescriptionList() *cobra.Command {
 	cmd.Flags().StringVar(&targetType, "target-type", "", "Filter by type")
 	cmd.Flags().StringVar(&hasContent, "has-content", "", "Filter: withContent, empty, all")
 	cmd.Flags().StringVar(&search, "search", "", "Search")
-	cmdutil.AddListFlags(cmd, &page, &limit)
+	cmd.Flags().IntVar(&limit, "limit", 0, "Limit results")
 	return cmd
 }
 
@@ -374,25 +397,29 @@ func newCmdHomework() *cobra.Command {
 
 func newCmdHomeworkList() *cobra.Command {
 	var status, search string
-	var page, limit int
+	var limit int
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List homeworks (admin)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			params := url.Values{}
+			params := &openapi.ListAdminHomeworksParams{}
 			if status != "" {
-				params.Set("status", status)
+				s := openapi.ListAdminHomeworksParamsStatus(status)
+				params.Status = &s
 			}
 			if search != "" {
-				params.Set("search", search)
+				params.Search = &search
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/admin/homeworks", params)
+			if limit > 0 {
+				l := cmdutil.Itoa(limit)
+				params.Limit = &l
+			}
+			data, err := api.ParseResponseRaw(c.ListAdminHomeworks(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -409,7 +436,7 @@ func newCmdHomeworkList() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&status, "status", "", "Status (all, active, deleted)")
 	cmd.Flags().StringVar(&search, "search", "", "Search")
-	cmdutil.AddListFlags(cmd, &page, &limit)
+	cmd.Flags().IntVar(&limit, "limit", 0, "Limit results")
 	return cmd
 }
 
@@ -429,11 +456,11 @@ func newCmdHomeworkDelete() *cobra.Command {
 					return nil
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Delete(fmt.Sprintf("/api/admin/homeworks/%s", args[0]), nil)
+			_, err = api.ParseResponseRaw(c.DeleteAdminHomework(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}

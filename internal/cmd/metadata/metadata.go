@@ -44,11 +44,11 @@ commands.`,
   # Output as JSON for scripting
   life-ustc metadata --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get("/api/metadata", nil)
+			data, err := api.ParseResponseRaw(c.GetMetadata(api.Ctx()))
 			if err != nil {
 				return err
 			}

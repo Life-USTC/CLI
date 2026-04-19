@@ -13,6 +13,7 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -34,11 +35,11 @@ func NewCmdUpload() *cobra.Command {
 }
 
 func runUploadList(cmd *cobra.Command) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 	if err != nil {
 		return err
 	}
-	data, err := c.Get("/api/uploads", nil)
+	data, err := api.ParseResponseRaw(c.ListUploads(api.Ctx()))
 	if err != nil {
 		return err
 	}
@@ -101,23 +102,27 @@ func newCmdFile() *cobra.Command {
 				contentType = guessContentType(filePath)
 			}
 
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
 
 			// Step 1: Create upload
-			createResp, err := c.Post("/api/uploads", map[string]any{
-				"filename":    filepath.Base(filePath),
-				"contentType": contentType,
-				"size":        stat.Size(),
-			})
+			size := fmt.Sprintf("%d", stat.Size())
+			reqBody := openapi.CreateUploadJSONRequestBody{
+				Filename: filepath.Base(filePath),
+				Size:     size,
+			}
+			if contentType != "" {
+				reqBody.ContentType = &contentType
+			}
+			createResp, err := api.ParseResponseRaw(c.CreateUpload(api.Ctx(), reqBody))
 			if err != nil {
 				return err
 			}
 			cm := cmdutil.AsMap(createResp)
-			uploadURL, _ := cm["uploadUrl"].(string)
-			uploadID, _ := cm["id"].(string)
+			uploadURL, _ := cm["url"].(string)
+			uploadKey, _ := cm["key"].(string)
 
 			if uploadURL == "" {
 				return fmt.Errorf("server did not return an upload URL")
@@ -142,12 +147,19 @@ func newCmdFile() *cobra.Command {
 			}
 
 			// Step 3: Complete
-			_, err = c.Post("/api/uploads/complete", map[string]any{"id": uploadID})
+			completeBody := openapi.CompleteUploadJSONRequestBody{
+				Key:      uploadKey,
+				Filename: filepath.Base(filePath),
+			}
+			if contentType != "" {
+				completeBody.ContentType = &contentType
+			}
+			_, err = api.ParseResponseRaw(c.CompleteUpload(api.Ctx(), completeBody))
 			if err != nil {
 				return err
 			}
 
-			output.Success(fmt.Sprintf("Uploaded %s (ID: %s)", filepath.Base(filePath), uploadID))
+			output.Success(fmt.Sprintf("Uploaded %s (key: %s)", filepath.Base(filePath), uploadKey))
 			return nil
 		},
 	}
@@ -163,11 +175,11 @@ func newCmdRename() *cobra.Command {
 		Short:   "Rename an upload",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/uploads/%s", args[0]), map[string]any{"filename": filename})
+			_, err = api.ParseResponseRaw(c.RenameUpload(api.Ctx(), args[0], openapi.RenameUploadJSONRequestBody{Filename: filename}))
 			if err != nil {
 				return err
 			}
@@ -196,11 +208,11 @@ func newCmdDelete() *cobra.Command {
 					return nil
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Delete(fmt.Sprintf("/api/uploads/%s", args[0]), nil)
+			_, err = api.ParseResponseRaw(c.DeleteUploadWithBody(api.Ctx(), args[0], "application/json", strings.NewReader("{}")))
 			if err != nil {
 				return err
 			}
@@ -220,15 +232,19 @@ func newCmdDownload() *cobra.Command {
 		Short:   "Download a file",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			resp, err := c.GetRaw(fmt.Sprintf("/api/uploads/%s/download", args[0]), nil)
+			resp, err := c.DownloadUpload(api.Ctx(), args[0])
 			if err != nil {
 				return err
 			}
 			defer func() { _ = resp.Body.Close() }()
+			if resp.StatusCode >= 400 {
+				errBody, _ := io.ReadAll(resp.Body)
+				return fmt.Errorf("download failed: HTTP %d: %s", resp.StatusCode, string(errBody))
+			}
 			data, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err

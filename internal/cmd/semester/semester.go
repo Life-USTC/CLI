@@ -1,12 +1,11 @@
 package semester
 
 import (
-	"net/url"
-
 	"github.com/spf13/cobra"
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -37,13 +36,20 @@ func NewCmdSemester() *cobra.Command {
 }
 
 func runSemesterList(cmd *cobra.Command, opts semesterListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-	data, err := c.Get("/api/semesters", params)
+	params := &openapi.ListSemestersParams{}
+	if opts.page > 0 {
+		p := cmdutil.Itoa(opts.page)
+		params.Page = &p
+	}
+	if opts.limit > 0 {
+		l := cmdutil.Itoa(opts.limit)
+		params.Limit = &l
+	}
+	data, err := api.ParseResponseRaw(c.ListSemesters(api.Ctx(), params))
 	if err != nil {
 		return err
 	}
@@ -77,11 +83,11 @@ func newCmdCurrent() *cobra.Command {
 		Use:   "current",
 		Short: "Show current semester",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get("/api/semesters/current", nil)
+			data, err := api.ParseResponseRaw(c.GetCurrentSemester(api.Ctx()))
 			if err != nil {
 				return err
 			}

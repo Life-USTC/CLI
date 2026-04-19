@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -88,50 +90,45 @@ type todoListOpts struct {
 }
 
 func runTodoList(cmd *cobra.Command, opts todoListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 	if err != nil {
 		return err
 	}
-	data, err := c.Get("/api/todos", nil)
+
+	// Build server-side filter params
+	params := &openapi.ListTodosParams{}
+	if opts.done {
+		v := openapi.ListTodosParamsCompletedTrue
+		params.Completed = &v
+	}
+	if opts.pending {
+		v := openapi.ListTodosParamsCompletedFalse
+		params.Completed = &v
+	}
+	if opts.priority != "" {
+		v := openapi.ListTodosParamsPriority(opts.priority)
+		params.Priority = &v
+	}
+	if opts.before != "" {
+		t, err := time.Parse(time.RFC3339, opts.before)
+		if err != nil {
+			return fmt.Errorf("invalid --before date (expected RFC3339): %w", err)
+		}
+		params.DueBefore = &t
+	}
+	if opts.after != "" {
+		t, err := time.Parse(time.RFC3339, opts.after)
+		if err != nil {
+			return fmt.Errorf("invalid --after date (expected RFC3339): %w", err)
+		}
+		params.DueAfter = &t
+	}
+
+	data, err := api.ParseResponseRaw(c.ListTodos(api.Ctx(), params))
 	if err != nil {
 		return err
 	}
 	_, rows, total, pg := cmdutil.ExtractList(data, "todos")
-
-	// Client-side filtering (the todo API has no query params)
-	var filtered []map[string]any
-	for _, row := range rows {
-		if opts.done {
-			if v, _ := row["completed"].(bool); !v {
-				continue
-			}
-		}
-		if opts.pending {
-			if v, _ := row["completed"].(bool); v {
-				continue
-			}
-		}
-		if opts.priority != "" {
-			if p, _ := row["priority"].(string); p != opts.priority {
-				continue
-			}
-		}
-		if opts.before != "" {
-			if due, _ := row["dueAt"].(string); due == "" || due > opts.before {
-				continue
-			}
-		}
-		if opts.after != "" {
-			if due, _ := row["dueAt"].(string); due == "" || due < opts.after {
-				continue
-			}
-		}
-		filtered = append(filtered, row)
-	}
-	if opts.done || opts.pending || opts.priority != "" || opts.before != "" || opts.after != "" {
-		rows = filtered
-		total = len(rows)
-	}
 
 	output.OutputList(data, rows, []output.Column{
 		{Header: "ID", Key: "id"},
@@ -199,21 +196,22 @@ func newCmdCreate() *cobra.Command {
 				}
 			}
 
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"title": title}
+			body := openapi.CreateTodoJSONRequestBody{Title: title}
 			if content != "" {
-				body["content"] = content
+				body.Content = &content
 			}
 			if priority != "" {
-				body["priority"] = priority
+				p := openapi.TodoCreateRequestSchemaPriority(priority)
+				body.Priority = &p
 			}
 			if due != "" {
-				body["dueAt"] = due
+				body.DueAt = &due
 			}
-			data, err := c.Post("/api/todos", body)
+			data, err := api.ParseResponseRaw(c.CreateTodo(api.Ctx(), nil, body))
 			if err != nil {
 				return err
 			}
@@ -241,33 +239,43 @@ func newCmdUpdate() *cobra.Command {
 		Short: "Update a todo",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{}
+			body := openapi.UpdateTodoJSONRequestBody{}
+			hasUpdate := false
 			if title != "" {
-				body["title"] = title
+				body.Title = &title
+				hasUpdate = true
 			}
 			if content != "" {
-				body["content"] = content
+				body.Content = &content
+				hasUpdate = true
 			}
 			if priority != "" {
-				body["priority"] = priority
+				p := openapi.TodoUpdateRequestSchemaPriority(priority)
+				body.Priority = &p
+				hasUpdate = true
 			}
 			if due != "" {
-				body["dueAt"] = due
+				body.DueAt = &due
+				hasUpdate = true
 			}
 			if completed {
-				body["completed"] = true
+				t := true
+				body.Completed = &t
+				hasUpdate = true
 			}
 			if notCompleted {
-				body["completed"] = false
+				f := false
+				body.Completed = &f
+				hasUpdate = true
 			}
-			if len(body) == 0 {
+			if !hasUpdate {
 				return fmt.Errorf("nothing to update — specify at least one flag (e.g. --title, --completed)")
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/todos/%s", args[0]), body)
+			_, err = api.ParseResponseRaw(c.UpdateTodo(api.Ctx(), args[0], body))
 			if err != nil {
 				return err
 			}
@@ -300,11 +308,11 @@ func newCmdDelete() *cobra.Command {
 					return nil
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Delete(fmt.Sprintf("/api/todos/%s", args[0]), nil)
+			_, err = api.ParseResponseRaw(c.DeleteTodo(api.Ctx(), args[0], openapi.DeleteTodoJSONRequestBody{}))
 			if err != nil {
 				return err
 			}

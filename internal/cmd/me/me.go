@@ -27,11 +27,11 @@ func NewCmdMe() *cobra.Command {
   life-ustc me todo list --done`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get("/api/me", nil)
+			data, err := api.ParseResponseRaw(c.GetMe(api.Ctx()))
 			if err != nil {
 				return err
 			}

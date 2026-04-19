@@ -7,6 +7,7 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -39,14 +40,15 @@ func newCmdGetFor(targetType string) *cobra.Command {
 		Short:   fmt.Sprintf("Get description for a %s", targetType),
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get("/api/descriptions", map[string][]string{
-				"targetType": {targetType},
-				"targetId":   {args[0]},
-			})
+			params := &openapi.GetDescriptionParams{
+				TargetType: openapi.GetDescriptionParamsTargetType(targetType),
+				TargetId:   args[0],
+			}
+			data, err := api.ParseResponseRaw(c.GetDescription(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -94,15 +96,20 @@ func newCmdSetFor(targetType string) *cobra.Command {
 		Short: fmt.Sprintf("Create or update description for a %s", targetType),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			data, err := c.Post("/api/descriptions", map[string]any{
-				"targetType": targetType,
-				"targetId":   args[0],
-				"content":    content,
-			})
+			params := &openapi.UpsertDescriptionParams{
+				TargetType: openapi.UpsertDescriptionParamsTargetType(targetType),
+				TargetId:   args[0],
+			}
+			reqBody := openapi.UpsertDescriptionJSONRequestBody{
+				TargetType: openapi.DescriptionUpsertRequestSchemaTargetType(targetType),
+				TargetId:   args[0],
+				Content:    content,
+			}
+			data, err := api.ParseResponseRaw(c.UpsertDescription(api.Ctx(), params, reqBody))
 			if err != nil {
 				return err
 			}
@@ -127,14 +134,15 @@ func newCmdGet() *cobra.Command {
 		Aliases: []string{"show"},
 		Short:   "Get description for a resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get("/api/descriptions", map[string][]string{
-				"targetType": {targetType},
-				"targetId":   {targetID},
-			})
+			params := &openapi.GetDescriptionParams{
+				TargetType: openapi.GetDescriptionParamsTargetType(targetType),
+				TargetId:   targetID,
+			}
+			data, err := api.ParseResponseRaw(c.GetDescription(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -187,15 +195,20 @@ func newCmdSet() *cobra.Command {
 		Use:   "set",
 		Short: "Create or update a description",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			data, err := c.Post("/api/descriptions", map[string]any{
-				"targetType": targetType,
-				"targetId":   targetID,
-				"content":    content,
-			})
+			params := &openapi.UpsertDescriptionParams{
+				TargetType: openapi.UpsertDescriptionParamsTargetType(targetType),
+				TargetId:   targetID,
+			}
+			reqBody := openapi.UpsertDescriptionJSONRequestBody{
+				TargetType: openapi.DescriptionUpsertRequestSchemaTargetType(targetType),
+				TargetId:   targetID,
+				Content:    content,
+			}
+			data, err := api.ParseResponseRaw(c.UpsertDescription(api.Ctx(), params, reqBody))
 			if err != nil {
 				return err
 			}

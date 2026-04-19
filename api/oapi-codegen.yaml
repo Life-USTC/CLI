@@ -1,0 +1,9 @@
+package: openapi
+output: internal/openapi/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  skip-prune: true
+  exclude-tags:
+    - Api

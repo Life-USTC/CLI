@@ -1,7 +1,7 @@
 VERSION ?= dev
 LDFLAGS := -ldflags "-X github.com/Life-USTC/CLI/internal/cmd/root.version=$(VERSION)"
 
-.PHONY: build clean test lint
+.PHONY: build clean test lint generate
 
 build:
 	go build $(LDFLAGS) -o life-ustc ./cmd/life-ustc
@@ -18,3 +18,6 @@ lint:
 
 install:
 	go install $(LDFLAGS) ./cmd/life-ustc
+
+generate:
+	oapi-codegen -config api/oapi-codegen.yaml api/openapi.json

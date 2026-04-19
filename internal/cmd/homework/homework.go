@@ -2,9 +2,7 @@ package homework
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -13,6 +11,7 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -76,16 +75,19 @@ func newCmdSectionList() *cobra.Command {
 		Short:   "List homeworks for a section",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			params := url.Values{"sectionId": {args[0]}}
+			inclDel := openapi.ListHomeworksParamsIncludeDeleted("false")
 			if includeDeleted {
-				params.Set("includeDeleted", "true")
+				inclDel = openapi.ListHomeworksParamsIncludeDeletedTrue
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/homeworks", params)
+			params := &openapi.ListHomeworksParams{
+				SectionId:      &args[0],
+				IncludeDeleted: &inclDel,
+			}
+			data, err := api.ParseResponseRaw(c.ListHomeworks(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -128,30 +130,33 @@ func newCmdSectionCreate() *cobra.Command {
 					submissionDue = promptText("Submission due (optional, ISO 8601)")
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"sectionId": sectionID, "title": title}
+			body := openapi.CreateHomeworkJSONRequestBody{
+				SectionId: sectionID,
+				Title:     title,
+			}
 			if desc != "" {
-				body["description"] = desc
+				body.Description = &desc
 			}
 			if publishedAt != "" {
-				body["publishedAt"] = publishedAt
+				body.PublishedAt = &publishedAt
 			}
 			if submissionStart != "" {
-				body["submissionStartAt"] = submissionStart
+				body.SubmissionStartAt = &submissionStart
 			}
 			if submissionDue != "" {
-				body["submissionDueAt"] = submissionDue
+				body.SubmissionDueAt = &submissionDue
 			}
 			if major {
-				body["isMajor"] = true
+				body.IsMajor = &major
 			}
 			if requiresTeam {
-				body["requiresTeam"] = true
+				body.RequiresTeam = &requiresTeam
 			}
-			data, err := c.Post("/api/homeworks", body)
+			data, err := api.ParseResponseRaw(c.CreateHomework(api.Ctx(), nil, body))
 			if err != nil {
 				return err
 			}
@@ -238,109 +243,59 @@ func addMyHomeworkListFlags(cmd *cobra.Command, opts *myHomeworkListOpts) {
 }
 
 func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 	if err != nil {
 		return err
 	}
 
-	// Determine section IDs to query
-	var sectionIDs []string
-	if opts.sectionID != "" {
-		sectionIDs = []string{opts.sectionID}
-	} else {
-		// Fetch subscribed sections from calendar
-		calData, calErr := c.Get("/api/calendar-subscriptions/current", nil)
-		if calErr != nil {
-			return fmt.Errorf("failed to fetch subscribed sections: %w\n\n  Tip: use --section-id to specify a section directly", calErr)
-		}
-		calMap := cmdutil.AsMap(calData)
-		sub, _ := calMap["subscription"].(map[string]any)
-		if sub == nil {
-			return fmt.Errorf("no calendar subscription found\n\n  Tip: subscribe to sections first, or use --section-id")
-		}
-		sections, _ := sub["sections"].([]any)
-		if len(sections) == 0 {
-			output.Dim("  No subscribed sections — no homeworks to show.")
-			output.Hint("subscribe to sections first, or use --section-id")
-			return nil
-		}
-		for _, s := range sections {
-			if sm, ok := s.(map[string]any); ok {
-				if id, ok := sm["id"].(float64); ok {
-					sectionIDs = append(sectionIDs, cmdutil.Itoa(int(id)))
-				}
-			}
-		}
-		if len(sectionIDs) == 0 {
-			output.Dim("  No subscribed sections — no homeworks to show.")
-			return nil
-		}
-		output.VerboseF("fetching homework from %d subscribed sections", len(sectionIDs))
-	}
-
-	// Build common filter params (reusable for bulk and per-section)
-	filterParams := func() url.Values {
-		p := url.Values{}
-		if opts.done {
-			p.Set("isCompleted", "true")
-		}
-		if opts.pending {
-			p.Set("isCompleted", "false")
-		}
-		if opts.before != "" {
-			p.Set("dueBefore", opts.before)
-		}
-		if opts.after != "" {
-			p.Set("dueAfter", opts.after)
-		}
-		return p
-	}
-
 	var data any
 	var rows []map[string]any
-	var total int
 
-	if len(sectionIDs) == 1 {
-		// Single section — always use sectionId
-		params := filterParams()
-		params.Set("sectionId", sectionIDs[0])
-		cmdutil.ApplyListParams(params, opts.page, opts.limit)
-		data, err = c.Get("/api/homeworks", params)
+	if opts.sectionID != "" {
+		// Single section — use /api/homeworks with sectionId filter
+		params := &openapi.ListHomeworksParams{
+			SectionId: &opts.sectionID,
+		}
+		data, err = api.ParseResponseRaw(c.ListHomeworks(api.Ctx(), params))
 		if err != nil {
 			return err
 		}
-		_, rows, total, _ = cmdutil.ExtractList(data, "homeworks")
+		_, rows, _, _ = cmdutil.ExtractList(data, "homeworks")
 	} else {
-		// Multiple sections — try bulk sectionIds, fall back to per-section
-		params := filterParams()
-		params.Set("sectionIds", strings.Join(sectionIDs, ","))
-		cmdutil.ApplyListParams(params, opts.page, opts.limit)
-		data, err = c.Get("/api/homeworks", params)
-
-		var apiErr *api.APIError
-		if err != nil && errors.As(err, &apiErr) && apiErr.Status == 400 {
-			// Server doesn't support sectionIds yet — fall back to per-section queries
-			output.VerboseF("bulk sectionIds not supported, falling back to per-section queries")
-			var allRows []map[string]any
-			for _, sid := range sectionIDs {
-				fp := filterParams()
-				fp.Set("sectionId", sid)
-				sData, sErr := c.Get("/api/homeworks", fp)
-				if sErr != nil {
-					output.VerboseF("section %s: %s", sid, sErr)
-					continue
-				}
-				_, sRows, _, _ := cmdutil.ExtractList(sData, "homeworks")
-				allRows = append(allRows, sRows...)
-			}
-			rows = allRows
-			total = len(allRows)
-			// Build a synthetic response for JSON output
-			data = map[string]any{"homeworks": allRows}
-		} else if err != nil {
+		// All subscribed sections — use the combined endpoint
+		data, err = api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx()))
+		if err != nil {
 			return err
-		} else {
-			_, rows, total, _ = cmdutil.ExtractList(data, "homeworks")
+		}
+		_, rows, _, _ = cmdutil.ExtractList(data, "homeworks")
+
+		// Client-side filtering for the combined endpoint
+		if opts.done || opts.pending || opts.before != "" || opts.after != "" {
+			var filtered []map[string]any
+			for _, row := range rows {
+				if opts.done {
+					if v, _ := row["isCompleted"].(bool); !v {
+						continue
+					}
+				}
+				if opts.pending {
+					if v, _ := row["isCompleted"].(bool); v {
+						continue
+					}
+				}
+				if opts.before != "" {
+					if due, _ := row["submissionDueAt"].(string); due == "" || due > opts.before {
+						continue
+					}
+				}
+				if opts.after != "" {
+					if due, _ := row["submissionDueAt"].(string); due == "" || due < opts.after {
+						continue
+					}
+				}
+				filtered = append(filtered, row)
+			}
+			rows = filtered
 		}
 	}
 
@@ -358,11 +313,7 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 		return nil
 	}
 
-	if total > 0 {
-		output.Dim(fmt.Sprintf("  %d homework(s) across %d section(s)", total, len(sectionIDs)))
-	} else {
-		output.Dim(fmt.Sprintf("  %d homework(s) across %d section(s)", len(rows), len(sectionIDs)))
-	}
+	output.Dim(fmt.Sprintf("  %d homework(s)", len(rows)))
 	output.Table(rows, []output.Column{
 		{Header: "ID", Key: "id"},
 		{Header: "Title", Key: "title"},
@@ -387,16 +338,19 @@ func newCmdList() *cobra.Command {
 			if sectionID == "" {
 				return fmt.Errorf("--section-id is required")
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			params := url.Values{"sectionId": {sectionID}}
+			inclDel := openapi.ListHomeworksParamsIncludeDeleted("false")
 			if includeDeleted {
-				params.Set("includeDeleted", "true")
+				inclDel = openapi.ListHomeworksParamsIncludeDeletedTrue
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/homeworks", params)
+			params := &openapi.ListHomeworksParams{
+				SectionId:      &sectionID,
+				IncludeDeleted: &inclDel,
+			}
+			data, err := api.ParseResponseRaw(c.ListHomeworks(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -444,30 +398,33 @@ func newCmdCreate() *cobra.Command {
 					submissionDue = promptText("Submission due (optional, ISO 8601)")
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"sectionId": sectionID, "title": title}
+			body := openapi.CreateHomeworkJSONRequestBody{
+				SectionId: sectionID,
+				Title:     title,
+			}
 			if desc != "" {
-				body["description"] = desc
+				body.Description = &desc
 			}
 			if publishedAt != "" {
-				body["publishedAt"] = publishedAt
+				body.PublishedAt = &publishedAt
 			}
 			if submissionStart != "" {
-				body["submissionStartAt"] = submissionStart
+				body.SubmissionStartAt = &submissionStart
 			}
 			if submissionDue != "" {
-				body["submissionDueAt"] = submissionDue
+				body.SubmissionDueAt = &submissionDue
 			}
 			if major {
-				body["isMajor"] = true
+				body.IsMajor = &major
 			}
 			if requiresTeam {
-				body["requiresTeam"] = true
+				body.RequiresTeam = &requiresTeam
 			}
-			data, err := c.Post("/api/homeworks", body)
+			data, err := api.ParseResponseRaw(c.CreateHomework(api.Ctx(), nil, body))
 			if err != nil {
 				return err
 			}
@@ -498,39 +455,52 @@ func newCmdUpdate() *cobra.Command {
 		Short: "Update a homework",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{}
+			body := openapi.UpdateHomeworkJSONRequestBody{}
+			hasUpdate := false
 			if title != "" {
-				body["title"] = title
+				body.Title = &title
+				hasUpdate = true
 			}
 			if publishedAt != "" {
-				body["publishedAt"] = publishedAt
+				body.PublishedAt = &publishedAt
+				hasUpdate = true
 			}
 			if submissionStart != "" {
-				body["submissionStartAt"] = submissionStart
+				body.SubmissionStartAt = &submissionStart
+				hasUpdate = true
 			}
 			if submissionDue != "" {
-				body["submissionDueAt"] = submissionDue
+				body.SubmissionDueAt = &submissionDue
+				hasUpdate = true
 			}
 			if major {
-				body["isMajor"] = true
+				t := true
+				body.IsMajor = &t
+				hasUpdate = true
 			}
 			if notMajor {
-				body["isMajor"] = false
+				f := false
+				body.IsMajor = &f
+				hasUpdate = true
 			}
 			if requiresTeam {
-				body["requiresTeam"] = true
+				t := true
+				body.RequiresTeam = &t
+				hasUpdate = true
 			}
 			if noTeam {
-				body["requiresTeam"] = false
+				f := false
+				body.RequiresTeam = &f
+				hasUpdate = true
 			}
-			if len(body) == 0 {
+			if !hasUpdate {
 				return fmt.Errorf("nothing to update — specify at least one flag")
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/homeworks/%s", args[0]), body)
+			_, err = api.ParseResponseRaw(c.UpdateHomework(api.Ctx(), args[0], body))
 			if err != nil {
 				return err
 			}
@@ -565,11 +535,11 @@ func newCmdDelete() *cobra.Command {
 					return nil
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Delete(fmt.Sprintf("/api/homeworks/%s", args[0]), nil)
+			_, err = api.ParseResponseRaw(c.DeleteHomework(api.Ctx(), args[0], openapi.DeleteHomeworkJSONRequestBody{}))
 			if err != nil {
 				return err
 			}
@@ -588,12 +558,12 @@ func newCmdComplete() *cobra.Command {
 		Short: "Mark homework as complete",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"completed": !undo}
-			_, err = c.Put(fmt.Sprintf("/api/homeworks/%s/completion", args[0]), body)
+			body := openapi.SetHomeworkCompletionJSONRequestBody{Completed: !undo}
+			_, err = api.ParseResponseRaw(c.SetHomeworkCompletion(api.Ctx(), args[0], body))
 			if err != nil {
 				return err
 			}

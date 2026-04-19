@@ -2,12 +2,13 @@ package calendar
 
 import (
 	"fmt"
-	"strings"
+	"strconv"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -26,11 +27,11 @@ func NewCmdCalendar() *cobra.Command {
 }
 
 func runCalendarGet(cmd *cobra.Command) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 	if err != nil {
 		return err
 	}
-	data, err := c.Get("/api/calendar-subscriptions/current", nil)
+	data, err := api.ParseResponseRaw(c.GetCurrentCalendarSubscription(api.Ctx()))
 	if err != nil {
 		return err
 	}
@@ -89,13 +90,22 @@ func newCmdSet() *cobra.Command {
 		Short: "Set calendar section subscriptions",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Post("/api/calendar-subscriptions", map[string]any{
-				"sectionIds": strings.Join(args, ","),
-			})
+			sectionIds := make([]int, len(args))
+			for i, arg := range args {
+				id, err := strconv.Atoi(arg)
+				if err != nil {
+					return fmt.Errorf("invalid section ID %q: %w", arg, err)
+				}
+				sectionIds[i] = id
+			}
+			body := openapi.SetCalendarSubscriptionJSONRequestBody{
+				SectionIds: &sectionIds,
+			}
+			_, err = api.ParseResponseRaw(c.SetCalendarSubscription(api.Ctx(), body))
 			if err != nil {
 				return err
 			}

@@ -2,7 +2,6 @@ package course
 
 import (
 	"fmt"
-	"net/url"
 
 	"github.com/spf13/cobra"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
 	"github.com/Life-USTC/CLI/internal/cmd/comment"
 	"github.com/Life-USTC/CLI/internal/cmd/description"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -50,25 +50,32 @@ type courseListOpts struct {
 }
 
 func runCourseList(cmd *cobra.Command, opts courseListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
+	params := openapi.ListCoursesParams{}
 	if opts.search != "" {
-		params.Set("search", opts.search)
+		params.Search = &opts.search
 	}
 	if opts.educationLevelID != "" {
-		params.Set("educationLevelId", opts.educationLevelID)
+		params.EducationLevelId = &opts.educationLevelID
 	}
 	if opts.categoryID != "" {
-		params.Set("categoryId", opts.categoryID)
+		params.CategoryId = &opts.categoryID
 	}
 	if opts.classTypeID != "" {
-		params.Set("classTypeId", opts.classTypeID)
+		params.ClassTypeId = &opts.classTypeID
 	}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-	data, err := c.Get("/api/courses", params)
+	if opts.page > 0 {
+		p := cmdutil.Itoa(opts.page)
+		params.Page = &p
+	}
+	if opts.limit > 0 {
+		l := cmdutil.Itoa(opts.limit)
+		params.Limit = &l
+	}
+	data, err := api.ParseResponseRaw(c.ListCourses(api.Ctx(), &params))
 	if err != nil {
 		return err
 	}
@@ -112,11 +119,11 @@ func newCmdView() *cobra.Command {
 		Short:   "View course details",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get(fmt.Sprintf("/api/courses/%s", args[0]), nil)
+			data, err := api.ParseResponseRaw(c.GetCourse(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}

@@ -1,12 +1,14 @@
 package schedule
 
 import (
-	"net/url"
+	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -53,31 +55,47 @@ func addScheduleListFlags(cmd *cobra.Command, opts *scheduleListOpts) {
 }
 
 func runScheduleList(cmd *cobra.Command, opts scheduleListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
+	params := openapi.ListSchedulesParams{}
 	if opts.sectionID != "" {
-		params.Set("sectionId", opts.sectionID)
+		params.SectionId = &opts.sectionID
 	}
 	if opts.teacherID != "" {
-		params.Set("teacherId", opts.teacherID)
+		params.TeacherId = &opts.teacherID
 	}
 	if opts.roomID != "" {
-		params.Set("roomId", opts.roomID)
+		params.RoomId = &opts.roomID
 	}
 	if opts.dateFrom != "" {
-		params.Set("dateFrom", opts.dateFrom)
+		t, err := time.Parse(time.DateOnly, opts.dateFrom)
+		if err != nil {
+			return fmt.Errorf("invalid --date-from: %w", err)
+		}
+		params.DateFrom = &t
 	}
 	if opts.dateTo != "" {
-		params.Set("dateTo", opts.dateTo)
+		t, err := time.Parse(time.DateOnly, opts.dateTo)
+		if err != nil {
+			return fmt.Errorf("invalid --date-to: %w", err)
+		}
+		params.DateTo = &t
 	}
 	if opts.weekday > 0 {
-		params.Set("weekday", cmdutil.Itoa(opts.weekday))
+		w := cmdutil.Itoa(opts.weekday)
+		params.Weekday = &w
 	}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-	data, err := c.Get("/api/schedules", params)
+	if opts.page > 0 {
+		p := cmdutil.Itoa(opts.page)
+		params.Page = &p
+	}
+	if opts.limit > 0 {
+		l := cmdutil.Itoa(opts.limit)
+		params.Limit = &l
+	}
+	data, err := api.ParseResponseRaw(c.ListSchedules(api.Ctx(), &params))
 	if err != nil {
 		return err
 	}

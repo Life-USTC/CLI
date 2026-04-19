@@ -2,8 +2,9 @@ package comment
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Life-USTC/CLI/internal/api"
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -79,20 +81,21 @@ func NewCmdCommentFor(targetType string) *cobra.Command {
 }
 
 func newCmdListFor(targetType string) *cobra.Command {
-	var page, limit int
 	cmd := &cobra.Command{
 		Use:     fmt.Sprintf("list <%s-id>", targetType),
 		Aliases: []string{"ls"},
 		Short:   fmt.Sprintf("List comments for a %s", targetType),
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			params := url.Values{"targetType": {targetType}, "targetId": {args[0]}}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/comments", params)
+			params := &openapi.ListCommentsParams{
+				TargetType: openapi.ListCommentsParamsTargetType(targetType),
+				TargetId:   &args[0],
+			}
+			data, err := api.ParseResponseRaw(c.ListComments(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -106,7 +109,6 @@ func newCmdListFor(targetType string) *cobra.Command {
 			return nil
 		},
 	}
-	cmdutil.AddListFlags(cmd, &page, &limit)
 	return cmd
 }
 
@@ -127,21 +129,27 @@ func newCmdCreateFor(targetType string) *cobra.Command {
 				}
 				body = promptText("Comment body")
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			payload := map[string]any{
-				"targetType":  targetType,
-				"targetId":    args[0],
-				"body":        body,
-				"visibility":  visibility,
-				"isAnonymous": anonymous,
+			targetIdVal := args[0]
+			params := &openapi.CreateCommentParams{
+				TargetType: openapi.CreateCommentParamsTargetType(targetType),
+				TargetId:   &targetIdVal,
+			}
+			vis := openapi.CommentCreateRequestSchemaVisibility(visibility)
+			reqBody := openapi.CreateCommentJSONRequestBody{
+				TargetType:  openapi.CommentCreateRequestSchemaTargetType(targetType),
+				TargetId:    &targetIdVal,
+				Body:        body,
+				Visibility:  &vis,
+				IsAnonymous: &anonymous,
 			}
 			if parentID != "" {
-				payload["parentId"] = parentID
+				reqBody.ParentId = &parentID
 			}
-			data, err := c.Post("/api/comments", payload)
+			data, err := api.ParseResponseRaw(c.CreateComment(api.Ctx(), params, reqBody))
 			if err != nil {
 				return err
 			}
@@ -161,7 +169,6 @@ func newCmdCreateFor(targetType string) *cobra.Command {
 func newCmdList() *cobra.Command {
 	var (
 		targetType, targetID, sectionID, teacherID string
-		page, limit                                int
 	)
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -171,22 +178,23 @@ func newCmdList() *cobra.Command {
 			if targetType == "" {
 				return fmt.Errorf("--target-type is required")
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			params := url.Values{"targetType": {targetType}}
+			params := &openapi.ListCommentsParams{
+				TargetType: openapi.ListCommentsParamsTargetType(targetType),
+			}
 			if targetID != "" {
-				params.Set("targetId", targetID)
+				params.TargetId = &targetID
 			}
 			if sectionID != "" {
-				params.Set("sectionId", sectionID)
+				params.SectionId = &sectionID
 			}
 			if teacherID != "" {
-				params.Set("teacherId", teacherID)
+				params.TeacherId = &teacherID
 			}
-			cmdutil.ApplyListParams(params, page, limit)
-			data, err := c.Get("/api/comments", params)
+			data, err := api.ParseResponseRaw(c.ListComments(api.Ctx(), params))
 			if err != nil {
 				return err
 			}
@@ -204,7 +212,6 @@ func newCmdList() *cobra.Command {
 	cmd.Flags().StringVar(&targetID, "target-id", "", "Target ID")
 	cmd.Flags().StringVar(&sectionID, "section-id", "", "Section ID (for section-teacher)")
 	cmd.Flags().StringVar(&teacherID, "teacher-id", "", "Teacher ID (for section-teacher)")
-	cmdutil.AddListFlags(cmd, &page, &limit)
 	return cmd
 }
 
@@ -215,11 +222,11 @@ func newCmdView() *cobra.Command {
 		Short:   "View a comment thread",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get(fmt.Sprintf("/api/comments/%s", args[0]), nil)
+			data, err := api.ParseResponseRaw(c.GetComment(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}
@@ -300,29 +307,42 @@ func newCmdCreate() *cobra.Command {
 				return fmt.Errorf("--target-id is required for this target type")
 			}
 
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			payload := map[string]any{
-				"targetType":  targetType,
-				"body":        body,
-				"visibility":  visibility,
-				"isAnonymous": anonymous,
+			params := &openapi.CreateCommentParams{
+				TargetType: openapi.CreateCommentParamsTargetType(targetType),
 			}
 			if targetID != "" {
-				payload["targetId"] = targetID
+				params.TargetId = &targetID
 			}
 			if sectionID != "" {
-				payload["sectionId"] = sectionID
+				params.SectionId = &sectionID
 			}
 			if teacherID != "" {
-				payload["teacherId"] = teacherID
+				params.TeacherId = &teacherID
+			}
+			vis := openapi.CommentCreateRequestSchemaVisibility(visibility)
+			reqBody := openapi.CreateCommentJSONRequestBody{
+				TargetType:  openapi.CommentCreateRequestSchemaTargetType(targetType),
+				Body:        body,
+				Visibility:  &vis,
+				IsAnonymous: &anonymous,
+			}
+			if targetID != "" {
+				reqBody.TargetId = &targetID
+			}
+			if sectionID != "" {
+				reqBody.SectionId = &sectionID
+			}
+			if teacherID != "" {
+				reqBody.TeacherId = &teacherID
 			}
 			if parentID != "" {
-				payload["parentId"] = parentID
+				reqBody.ParentId = &parentID
 			}
-			data, err := c.Post("/api/comments", payload)
+			data, err := api.ParseResponseRaw(c.CreateComment(api.Ctx(), params, reqBody))
 			if err != nil {
 				return err
 			}
@@ -350,7 +370,7 @@ func newCmdUpdate() *cobra.Command {
 		Short: "Edit a comment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
@@ -364,7 +384,11 @@ func newCmdUpdate() *cobra.Command {
 			if len(payload) == 0 {
 				return fmt.Errorf("nothing to update — specify at least one flag")
 			}
-			_, err = c.Patch(fmt.Sprintf("/api/comments/%s", args[0]), payload)
+			jsonBytes, err := json.Marshal(payload)
+			if err != nil {
+				return err
+			}
+			_, err = api.ParseResponseRaw(c.UpdateCommentWithBody(api.Ctx(), args[0], "application/json", bytes.NewReader(jsonBytes)))
 			if err != nil {
 				return err
 			}
@@ -393,11 +417,11 @@ func newCmdDelete() *cobra.Command {
 					return nil
 				}
 			}
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
-			_, err = c.Delete(fmt.Sprintf("/api/comments/%s", args[0]), nil)
+			_, err = api.ParseResponseRaw(c.DeleteCommentWithBody(api.Ctx(), args[0], "application/json", strings.NewReader("{}")))
 			if err != nil {
 				return err
 			}
@@ -417,18 +441,27 @@ func newCmdReact() *cobra.Command {
 		Short: "Add or remove a reaction",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), true)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), true)
 			if err != nil {
 				return err
 			}
 			if remove {
-				_, err = c.Delete(fmt.Sprintf("/api/comments/%s/reactions", args[0]), url.Values{"type": {reactionType}})
+				params := &openapi.RemoveCommentReactionParams{
+					Type: openapi.RemoveCommentReactionParamsType(reactionType),
+				}
+				body := openapi.RemoveCommentReactionJSONRequestBody{
+					Type: openapi.CommentReactionRequestSchemaType(reactionType),
+				}
+				_, err = api.ParseResponseRaw(c.RemoveCommentReaction(api.Ctx(), args[0], params, body))
 				if err != nil {
 					return err
 				}
 				output.Success("Reaction removed.")
 			} else {
-				_, err = c.Post(fmt.Sprintf("/api/comments/%s/reactions", args[0]), map[string]any{"type": reactionType})
+				body := openapi.AddCommentReactionJSONRequestBody{
+					Type: openapi.CommentReactionRequestSchemaType(reactionType),
+				}
+				_, err = api.ParseResponseRaw(c.AddCommentReaction(api.Ctx(), args[0], body))
 				if err != nil {
 					return err
 				}

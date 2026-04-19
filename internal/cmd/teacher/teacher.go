@@ -2,7 +2,6 @@ package teacher
 
 import (
 	"fmt"
-	"net/url"
 
 	"github.com/spf13/cobra"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/Life-USTC/CLI/internal/cmd/cmdutil"
 	"github.com/Life-USTC/CLI/internal/cmd/comment"
 	"github.com/Life-USTC/CLI/internal/cmd/description"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -48,19 +48,26 @@ type teacherListOpts struct {
 }
 
 func runTeacherList(cmd *cobra.Command, opts teacherListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
+	params := openapi.ListTeachersParams{}
 	if opts.departmentID != "" {
-		params.Set("departmentId", opts.departmentID)
+		params.DepartmentId = &opts.departmentID
 	}
 	if opts.search != "" {
-		params.Set("search", opts.search)
+		params.Search = &opts.search
 	}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-	data, err := c.Get("/api/teachers", params)
+	if opts.page > 0 {
+		p := cmdutil.Itoa(opts.page)
+		params.Page = &p
+	}
+	if opts.limit > 0 {
+		l := cmdutil.Itoa(opts.limit)
+		params.Limit = &l
+	}
+	data, err := api.ParseResponseRaw(c.ListTeachers(api.Ctx(), &params))
 	if err != nil {
 		return err
 	}
@@ -102,11 +109,11 @@ func newCmdView() *cobra.Command {
 		Short:   "View teacher details",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get(fmt.Sprintf("/api/teachers/%s", args[0]), nil)
+			data, err := api.ParseResponseRaw(c.GetTeacher(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}

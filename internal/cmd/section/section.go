@@ -3,7 +3,6 @@ package section
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -13,6 +12,7 @@ import (
 	"github.com/Life-USTC/CLI/internal/cmd/comment"
 	"github.com/Life-USTC/CLI/internal/cmd/description"
 	"github.com/Life-USTC/CLI/internal/cmd/homework"
+	openapi "github.com/Life-USTC/CLI/internal/openapi"
 	"github.com/Life-USTC/CLI/internal/output"
 )
 
@@ -60,34 +60,41 @@ type sectionListOpts struct {
 }
 
 func runSectionList(cmd *cobra.Command, opts sectionListOpts) error {
-	c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+	c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 	if err != nil {
 		return err
 	}
-	params := url.Values{}
+	params := openapi.ListSectionsParams{}
 	if opts.courseID != "" {
-		params.Set("courseId", opts.courseID)
+		params.CourseId = &opts.courseID
 	}
 	if opts.semesterID != "" {
-		params.Set("semesterId", opts.semesterID)
+		params.SemesterId = &opts.semesterID
 	}
 	if opts.campusID != "" {
-		params.Set("campusId", opts.campusID)
+		params.CampusId = &opts.campusID
 	}
 	if opts.departmentID != "" {
-		params.Set("departmentId", opts.departmentID)
+		params.DepartmentId = &opts.departmentID
 	}
 	if opts.teacherID != "" {
-		params.Set("teacherId", opts.teacherID)
+		params.TeacherId = &opts.teacherID
 	}
 	if opts.search != "" {
-		params.Set("search", opts.search)
+		params.Search = &opts.search
 	}
 	if opts.ids != "" {
-		params.Set("ids", opts.ids)
+		params.Ids = &opts.ids
 	}
-	cmdutil.ApplyListParams(params, opts.page, opts.limit)
-	data, err := c.Get("/api/sections", params)
+	if opts.page > 0 {
+		p := cmdutil.Itoa(opts.page)
+		params.Page = &p
+	}
+	if opts.limit > 0 {
+		l := cmdutil.Itoa(opts.limit)
+		params.Limit = &l
+	}
+	data, err := api.ParseResponseRaw(c.ListSections(api.Ctx(), &params))
 	if err != nil {
 		return err
 	}
@@ -134,11 +141,11 @@ func newCmdView() *cobra.Command {
 		Short:   "View section details",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get(fmt.Sprintf("/api/sections/%s", args[0]), nil)
+			data, err := api.ParseResponseRaw(c.GetSection(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}
@@ -200,11 +207,11 @@ func newCmdSchedules() *cobra.Command {
 		Short: "List schedules for a section",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			data, err := c.Get(fmt.Sprintf("/api/sections/%s/schedules", args[0]), nil)
+			data, err := api.ParseResponseRaw(c.GetSectionSchedules(api.Ctx(), args[0]))
 			if err != nil {
 				return err
 			}
@@ -228,11 +235,11 @@ func newCmdCalendar() *cobra.Command {
 		Short: "Download ICS calendar for a section",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			resp, err := c.GetRaw(fmt.Sprintf("/api/sections/%s/calendar.ics", args[0]), nil)
+			resp, err := c.GetSectionCalendar(api.Ctx(), args[0])
 			if err != nil {
 				return err
 			}
@@ -263,15 +270,17 @@ func newCmdMatchCodes() *cobra.Command {
 		Short: "Match section codes",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := api.NewClient(cmdutil.ServerFromCmd(cmd), false)
+			c, err := api.NewTypedClient(cmdutil.ServerFromCmd(cmd), false)
 			if err != nil {
 				return err
 			}
-			body := map[string]any{"codes": args}
-			if semesterID != "" {
-				body["semesterId"] = semesterID
+			body := openapi.MatchSectionCodesJSONRequestBody{
+				Codes: args,
 			}
-			data, err := c.Post("/api/sections/match-codes", body)
+			if semesterID != "" {
+				body.SemesterId = &semesterID
+			}
+			data, err := api.ParseResponseRaw(c.MatchSectionCodes(api.Ctx(), body))
 			if err != nil {
 				return err
 			}
