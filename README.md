@@ -1,66 +1,41 @@
 # Life@USTC CLI
 
-Command-line client for the [Life@USTC](https://life-ustc.tiankaima.dev) server
-(Web / REST / GraphQL / MCP live in [Life-USTC/server](https://github.com/Life-USTC/server)).
-Domains follow the
-[interface hierarchy](https://github.com/Life-USTC/server/blob/main/docs/interface-hierarchy.md).
+终端里使用 [Life@USTC](https://life-ustc.tiankaima.dev) 的命令行客户端
+（`life-ustc`）。数据与权限来自
+[server](https://github.com/Life-USTC/server)；域与能力名与 Web / Bot / MCP 同一棵树
+（[interface hierarchy](https://github.com/Life-USTC/server/blob/main/docs/interface-hierarchy.md)）。
 
-## Install
+## 面向谁
+
+- 习惯 shell 管理课表、待办、作业与订阅的同学
+- 需要脚本化调用 REST、或从官方教务站同步数据的用户
+- 做内容治理的管理员
+
+## 命令域
+
+| 域 | 能做什么 |
+|----|----------|
+| `catalog` | 公开事实：学期、课程、教学班、教师、课表、校车、校园链接、元数据 |
+| `workspace` | 个人概览、日历 / iCal、课表、考试、待办 CRUD、作业完成态、教学班订阅、校车偏好、链接置顶、上传 |
+| `workspace school` | 直连校方站点：本科/研究生学期、课表、考试、成绩、作业，并可 `sync` 回 Life@USTC 订阅 |
+| `community` | 评论（含反应）、描述、教学班作业 |
+| `account` | 登录 / 登出、session、token、资料、语言 |
+| `admin` | 用户、封禁、评论 / 描述 / 作业治理 |
+| `api` | 对任意 REST 路径的逃生舱（适合脚本） |
+| `config` / `completion` | 默认 server、教务程序偏好、shell 补全 |
+
+交互终端下，裸的 `course` / `section` / `teacher` 列表会打开 TUI；加过滤或
+`--no-interactive` 则输出表格。机器可读输出：`--json` / `--format json`，可用 `--jq`。
+
+登录支持浏览器 OAuth（PKCE）与设备码；默认 server 为生产站点，也可用
+`--server` / `LIFE_USTC_SERVER` 指向其它实例。
+
+## 安装
+
+发布包：[GitHub Releases](https://github.com/Life-USTC/CLI/releases)。或：
 
 ```bash
-# Release binary: https://github.com/Life-USTC/CLI/releases
 go install github.com/Life-USTC/CLI/cmd/life-ustc@latest
-# or: git clone … && make build
 ```
 
-## Usage
-
-```bash
-life-ustc --server http://localhost:3000 account login   # or LIFE_USTC_SERVER / config set-server
-life-ustc account session|profile|locale zh-cn
-
-life-ustc workspace overview|todo|homework|schedule|exam|subscription|calendar|upload …
-life-ustc catalog course|section|teacher|semester|bus|link|metadata …
-life-ustc community comment|description|section-homework …
-life-ustc admin user|comment|suspension …
-life-ustc api catalog/semesters/current                  # raw REST
-```
-
-Interactive terminals open a TUI for bare course/section/teacher lists; use
-`--no-interactive` for tables. Full flags: `life-ustc <cmd> --help`.
-
-### Domains
-
-| Command | Owns |
-|---------|------|
-| `catalog` | Public campus facts |
-| `workspace` | Current user's work + official-school import |
-| `community` | Shared comments / descriptions / section homework |
-| `account` | Profile, session, locale |
-| `admin` | Governance |
-| `config` / `completion` / `api` | CLI plumbing |
-
-### Official USTC sources
-
-`workspace school {semesters,curriculum,exam,score,homework,sync}` talk to
-official USTC sites from Go. Flags: `--username`, `--password`, `--totp`,
-`--undergraduate` / `--graduate`, `--all-programs`. Defaults via
-`life-ustc config set-school-programs` and env
-`PASSPORT_{UNDERGRADUATE,GRADUATE}_USERNAME`, `PASSPORT_PASSWORD`, `PASSPORT_TOTP`.
-
-## Output & config
-
-- `--format json` / `--json`, `--jq '…'`
-- Config: `~/.config/life-ustc/` (or `$XDG_CONFIG_HOME/life-ustc/`)
-- Completion: `life-ustc completion install [--shell zsh|bash]`
-
-| Option | Description |
-|--------|-------------|
-| `--server` | Server URL |
-| `--format` | table / json |
-| `--jq` | Filter JSON |
-| `--no-color` / `--version` / `--help` | |
-
-## License
-
-MIT
+子命令细节以 `life-ustc <cmd> --help` 为准。License: MIT。
