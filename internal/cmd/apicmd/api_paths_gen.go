@@ -60,6 +60,7 @@ var generatedAPIPaths = []string{
 	"/api/mcp/.well-known/oauth-authorization-server",
 	"/api/mcp/.well-known/openid-configuration",
 	"/api/openapi",
+	"/api/search",
 	"/api/workspace/bus-preferences",
 	"/api/workspace/homeworks",
 	"/api/workspace/homeworks/completions",
