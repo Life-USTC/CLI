@@ -76,11 +76,11 @@ func runTodoList(cmd *cobra.Command, opts todoListOpts) error {
 		return fmt.Errorf("--done and --pending cannot be used together")
 	}
 	if opts.done {
-		v := openapi.True
+		v := openapi.ListTodosParamsCompletedTrue
 		params.Completed = &v
 	}
 	if opts.pending {
-		v := openapi.False
+		v := openapi.ListTodosParamsCompletedFalse
 		params.Completed = &v
 	}
 	if opts.priority != "" {
@@ -294,11 +294,11 @@ func fetchTodoPickList(cmd *cobra.Command, opts todoListOpts) ([]map[string]any,
 	}
 	params := &openapi.ListTodosParams{}
 	if opts.done {
-		v := openapi.True
+		v := openapi.ListTodosParamsCompletedTrue
 		params.Completed = &v
 	}
 	if opts.pending {
-		v := openapi.False
+		v := openapi.ListTodosParamsCompletedFalse
 		params.Completed = &v
 	}
 	data, err := api.ParseResponseRaw(c.ListTodos(api.Ctx(), params))

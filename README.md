@@ -1,195 +1,41 @@
 # Life@USTC CLI
 
-Command-line client for the [Life@USTC](https://life-ustc.tiankaima.dev) campus platform.
+终端里使用 [Life@USTC](https://life-ustc.tiankaima.dev) 的命令行客户端
+（`life-ustc`）。数据与权限来自
+[server](https://github.com/Life-USTC/server)；域与能力名与 Web / Bot / MCP 同一棵树
+（[interface hierarchy](https://github.com/Life-USTC/server/blob/main/docs/interface-hierarchy.md)）。
 
-Built with Go around a [GitHub CLI](https://github.com/cli/cli)-style command model.
+## 面向谁
 
-## Installation
+- 习惯 shell 管理课表、待办、作业与订阅的同学
+- 需要脚本化调用 REST、或从官方教务站同步数据的用户
+- 做内容治理的管理员
 
-### From release binaries
+## 命令域
 
-Download the latest release from [GitHub Releases](https://github.com/Life-USTC/CLI/releases).
+| 域 | 能做什么 |
+|----|----------|
+| `catalog` | 公开事实：学期、课程、教学班、教师、课表、校车、校园链接、元数据 |
+| `workspace` | 个人概览、日历 / iCal、课表、考试、待办 CRUD、作业完成态、教学班订阅、校车偏好、链接置顶、上传 |
+| `workspace school` | 直连校方站点：本科/研究生学期、课表、考试、成绩、作业，并可 `sync` 回 Life@USTC 订阅 |
+| `community` | 评论（含反应）、描述、教学班作业 |
+| `account` | 登录 / 登出、session、token、资料、语言 |
+| `admin` | 用户、封禁、评论 / 描述 / 作业治理 |
+| `api` | 对任意 REST 路径的逃生舱（适合脚本） |
+| `config` / `completion` | 默认 server、教务程序偏好、shell 补全 |
 
-### From source
+交互终端下，裸的 `course` / `section` / `teacher` 列表会打开 TUI；加过滤或
+`--no-interactive` 则输出表格。机器可读输出：`--json` / `--format json`，可用 `--jq`。
+
+登录支持浏览器 OAuth（PKCE）与设备码；默认 server 为生产站点，也可用
+`--server` / `LIFE_USTC_SERVER` 指向其它实例。
+
+## 安装
+
+发布包：[GitHub Releases](https://github.com/Life-USTC/CLI/releases)。或：
 
 ```bash
 go install github.com/Life-USTC/CLI/cmd/life-ustc@latest
 ```
 
-### Build from source
-
-```bash
-git clone https://github.com/Life-USTC/CLI.git
-cd CLI
-make build
-```
-
-## Usage
-
-```bash
-# Set server (default: https://life-ustc.tiankaima.dev)
-life-ustc --server http://localhost:3000 account login
-
-# Or set default server
-life-ustc config set-server http://localhost:3000
-
-# Authenticate
-life-ustc account login
-life-ustc account session
-life-ustc account profile
-life-ustc account locale zh-cn
-
-# Personal workflows
-life-ustc workspace overview
-life-ustc workspace todo --pending
-life-ustc workspace todo create --title "Write report" --priority high
-life-ustc workspace todo complete <TODO_ID>
-life-ustc workspace homework --pending
-life-ustc workspace homework complete <HOMEWORK_ID>
-life-ustc workspace schedule
-life-ustc workspace exam
-life-ustc workspace subscription list
-life-ustc workspace subscription set <SECTION_ID_1> <SECTION_ID_2>
-life-ustc workspace subscription import <CODE_1> <CODE_2>
-life-ustc workspace calendar events
-life-ustc workspace calendar feed
-life-ustc workspace bus-preferences get
-life-ustc workspace link-pin list
-life-ustc workspace link-pin pin jw
-life-ustc workspace upload create ./report.pdf
-life-ustc workspace upload download <ID> -o report.pdf
-
-# Browse (no auth required unless noted)
-# In a terminal, bare course/section/teacher list commands open an interactive TUI.
-life-ustc catalog course
-life-ustc catalog course list --search "数学分析"
-life-ustc catalog course --no-interactive --limit 20
-life-ustc catalog course get <JW_ID>
-life-ustc catalog section list --semester-id <ID>
-life-ustc catalog teacher list --search "张"
-life-ustc catalog semester current
-life-ustc catalog bus timetable --from east --to west
-life-ustc catalog link
-life-ustc catalog metadata
-
-# Official USTC sources
-life-ustc workspace school semesters
-life-ustc workspace school semesters --graduate
-life-ustc workspace school curriculum --semester-id <ID>
-life-ustc workspace school exam
-life-ustc workspace school score
-life-ustc workspace school homework
-life-ustc workspace school sync --dry-run
-
-# Community features
-life-ustc community comment list --target-type section --target-id <ID>
-life-ustc community comment create --target-type section --target-id <ID> --body "Great class!"
-life-ustc community description get --target-type course --target-id <ID>
-life-ustc community section-homework create <SECTION_ID> --title "Problem Set 1"
-
-# Raw API access
-life-ustc api catalog/semesters/current
-life-ustc api workspace/todos -F title='Write report' -F priority=high
-life-ustc api catalog/sections --jq '.data[].code'
-
-# Admin
-life-ustc admin user list
-life-ustc admin comment list --status active
-life-ustc admin suspension create --user-id <ID> --reason "spam"
-```
-
-## Command Model
-
-- `catalog` contains public campus facts such as courses, sections, teachers, schedules, and buses.
-- `workspace` contains the current user's todos, homework state, schedules, exams, subscriptions, files, and official-school imports.
-- `community` contains shared comments, descriptions, and section homework entities.
-- `account` contains profile, login, session, token, and locale operations.
-- `admin` contains platform governance commands.
-- `config`, `completion`, and `api` remain top-level CLI plumbing rather than product domains.
-- Commands that benefit from guided input open their own TUI by default in an interactive terminal when no list/filter flags are provided, such as `course`, `section`, and `teacher`; use `--no-interactive` to force plain table output.
-
-## Official USTC Sources
-
-- `life-ustc workspace school semesters` reads undergraduate semesters from `catalog.ustc.edu.cn`, or graduate semesters from the official `yjs1.ustc.edu.cn` graduate apps with `--graduate`.
-- `life-ustc workspace school curriculum`, `exam`, and `score` sign in directly from Go without a browser backend.
-- `life-ustc workspace school homework` reads Blackboard or graduate homework data.
-- `life-ustc workspace school sync` matches school-system lessons to Life@USTC sections and updates workspace subscriptions.
-
-Authenticated `school` commands accept `--username`, `--password`, `--totp`, `--undergraduate`, `--graduate`, and sync commands also accept `--all-programs`. If omitted, the CLI falls back to the configured school program list, then program-specific credentials, then undergraduate. Persist defaults with `life-ustc config set-school-programs undergraduate,graduate`.
-
-- Undergraduate username: `PASSPORT_UNDERGRADUATE_USERNAME`
-- Graduate username: `PASSPORT_GRADUATE_USERNAME`
-- Password: `PASSPORT_PASSWORD`
-- TOTP: `PASSPORT_TOTP`
-
-## JSON output
-
-All commands support `--format json` or `--json` for machine-readable output:
-
-```bash
-life-ustc --json semester list
-life-ustc --json catalog course get 12345
-life-ustc catalog section list --jq '.data[].code'
-```
-
-## Shell Integration
-
-Install completion into your current shell without manually registering scripts:
-
-```bash
-life-ustc completion install
-```
-
-You can also target a specific shell:
-
-```bash
-life-ustc completion install --shell zsh
-life-ustc completion install --shell bash
-```
-
-Manual script generation remains available for package managers or custom setups:
-
-```bash
-life-ustc completion -s zsh
-life-ustc completion -s fish
-```
-
-## Raw API
-
-Use `life-ustc api` for unsupported or newly added endpoints.
-
-```bash
-# GET /api/catalog/metadata
-life-ustc api catalog/metadata
-
-# POST /api/workspace/todos with JSON body inferred from fields
-life-ustc api workspace/todos -F title='Write report' -F priority=high
-
-# POST exact request body from a file
-life-ustc api -X POST workspace/todos --input ./todo.json
-
-# Include response headers
-life-ustc api -i catalog/metadata
-```
-
-## Configuration
-
-- Config directory: `~/.config/life-ustc/` (or `$XDG_CONFIG_HOME/life-ustc/`)
-- Override server per-command: `--server URL`
-- Environment variable: `LIFE_USTC_SERVER`
-- School program default: `life-ustc config set-school-programs undergraduate,graduate`
-
-## Global Options
-
-| Option       | Description                    |
-|-------------|--------------------------------|
-| `--server`  | Server URL                     |
-| `--format`  | Output format (table/json)     |
-| `--jq`      | Filter JSON output with jq     |
-| `--no-color`| Disable colored output         |
-| `--version` | Show version                   |
-| `--help`    | Show help                      |
-
-## License
-
-MIT
+子命令细节以 `life-ustc <cmd> --help` 为准。License: MIT。
