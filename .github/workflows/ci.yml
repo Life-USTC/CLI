@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: ["**"]
 
 permissions:
   contents: read
@@ -22,6 +22,7 @@ jobs:
           if git ls-remote --exit-code --heads https://github.com/Life-USTC/server.git "$candidate" >/dev/null 2>&1; then
             echo "ref=$candidate" >> "$GITHUB_OUTPUT"
           else
+            echo "::warning::Server OpenAPI branch '$candidate' not found; falling back to main"
             echo "ref=main" >> "$GITHUB_OUTPUT"
           fi
 
