@@ -1,10 +1,11 @@
 VERSION ?= dev
-OPENAPI_SOURCE ?= ../server/public/openapi.generated.json
+OPENAPI_SERVER_DIR ?= ../server
+SERVER_COMMIT ?=
 LDFLAGS := -ldflags "-X github.com/Life-USTC/CLI/internal/cmd/root.version=$(VERSION)"
 
-.PHONY: build clean test lint install generate sync-openapi check-openapi-sync
+.PHONY: build clean test lint vet install generate sync-openapi check-openapi-provenance check-openapi-sync
 
-build:
+build: check-openapi-provenance generate
 	go build $(LDFLAGS) -o life-ustc ./cmd/life-ustc
 
 clean:
@@ -17,7 +18,10 @@ test:
 lint:
 	golangci-lint run ./...
 
-install:
+vet:
+	go vet ./...
+
+install: check-openapi-provenance generate
 	go install $(LDFLAGS) ./cmd/life-ustc
 
 generate:
@@ -25,7 +29,10 @@ generate:
 	go run ./internal/cmd/apicmd/genpaths
 
 sync-openapi:
-	cp $(OPENAPI_SOURCE) api/openapi.json
+	./scripts/openapi-contract sync "$(OPENAPI_SERVER_DIR)" "$(SERVER_COMMIT)"
+
+check-openapi-provenance:
+	./scripts/openapi-contract verify
 
 check-openapi-sync:
-	cmp -s $(OPENAPI_SOURCE) api/openapi.json
+	./scripts/openapi-contract verify-source "$(OPENAPI_SERVER_DIR)"

@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly repository="Life-USTC/server"
+readonly spec="api/openapi.json"
+readonly provenance="api/openapi.provenance.json"
+
+usage() {
+  echo "usage: $0 {pinned-sha|verify|verify-source SERVER_DIR|sync SERVER_DIR SERVER_COMMIT}" >&2
+  exit 2
+}
+
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+
+json_value() {
+  local key="$1"
+  sed -nE 's/^[[:space:]]*"'"$key"'"[[:space:]]*:[[:space:]]*"([^"]*)"[,]?[[:space:]]*$/\1/p' "$provenance"
+}
+
+pinned_sha() {
+  local commit
+  commit="$(json_value commit)"
+  [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "invalid or missing server commit in $provenance" >&2
+    exit 1
+  }
+  printf '%s\n' "$commit"
+}
+
+verify() {
+  [[ -f "$spec" && -f "$provenance" ]] || {
+    echo "OpenAPI spec or provenance is missing" >&2
+    exit 1
+  }
+
+  local recorded_repository recorded_hash actual_hash
+  recorded_repository="$(json_value repository)"
+  recorded_hash="$(json_value sha256)"
+  actual_hash="$(sha256_file "$spec")"
+
+  [[ "$recorded_repository" == "$repository" ]] || {
+    echo "unexpected OpenAPI repository: $recorded_repository" >&2
+    exit 1
+  }
+  pinned_sha >/dev/null
+  [[ "$recorded_hash" =~ ^[0-9a-f]{64}$ && "$recorded_hash" == "$actual_hash" ]] || {
+    echo "OpenAPI SHA-256 does not match $provenance" >&2
+    exit 1
+  }
+}
+
+verify_source() {
+  local server_dir="$1"
+  verify
+
+  local commit head source_spec
+  commit="$(pinned_sha)"
+  head="$(git -C "$server_dir" rev-parse HEAD)"
+  source_spec="$server_dir/public/openapi.generated.json"
+
+  [[ "$head" == "$commit" ]] || {
+    echo "server checkout is $head, expected pinned commit $commit" >&2
+    exit 1
+  }
+  cmp -s "$source_spec" "$spec" || {
+    echo "vendored OpenAPI does not match server commit $commit" >&2
+    exit 1
+  }
+}
+
+sync() {
+  local server_dir="$1"
+  local commit="$2"
+  local head source_spec hash
+
+  [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || {
+    echo "SERVER_COMMIT must be an exact 40-character lowercase commit SHA" >&2
+    exit 1
+  }
+  head="$(git -C "$server_dir" rev-parse HEAD)"
+  [[ "$head" == "$commit" ]] || {
+    echo "server checkout is $head, requested $commit; refusing to fall back" >&2
+    exit 1
+  }
+  source_spec="$server_dir/public/openapi.generated.json"
+  [[ -f "$source_spec" ]] || {
+    echo "server OpenAPI source not found: $source_spec" >&2
+    exit 1
+  }
+
+  # Keep the existing immutable pin when an unrelated server commit leaves the
+  # contract unchanged. This avoids provenance-only update PRs.
+  if cmp -s "$source_spec" "$spec" && verify >/dev/null 2>&1; then
+    echo "OpenAPI contract is unchanged at pinned commit $(pinned_sha)"
+    return
+  fi
+
+  cp "$source_spec" "$spec"
+  hash="$(sha256_file "$spec")"
+  printf '{\n  "repository": "%s",\n  "commit": "%s",\n  "sha256": "%s"\n}\n' \
+    "$repository" "$commit" "$hash" >"$provenance"
+  verify
+}
+
+case "${1:-}" in
+  pinned-sha)
+    [[ $# -eq 1 ]] || usage
+    pinned_sha
+    ;;
+  verify)
+    [[ $# -eq 1 ]] || usage
+    verify
+    ;;
+  verify-source)
+    [[ $# -eq 2 ]] || usage
+    verify_source "$2"
+    ;;
+  sync)
+    [[ $# -eq 3 ]] || usage
+    sync "$2" "$3"
+    ;;
+  *) usage ;;
+esac

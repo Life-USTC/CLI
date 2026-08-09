@@ -30,6 +30,22 @@
 登录支持浏览器 OAuth（PKCE）与设备码；默认 server 为生产站点，也可用
 `--server` / `LIFE_USTC_SERVER` 指向其它实例。
 
+## OpenAPI 契约
+
+CLI 从仓库内的 `api/openapi.json` 生成。`api/openapi.provenance.json` 记录
+对应的 server 提交和 SHA-256；`make build` 会先验证来源并重新生成客户端，
+再开始编译。
+
+更新契约时，先检出确定的 `Life-USTC/server` 提交，再运行：
+
+```sh
+make sync-openapi OPENAPI_SERVER_DIR=/path/to/server SERVER_COMMIT=<40-character-sha>
+make generate
+```
+
+CI 会核对固定的 server 提交，不再猜测同名分支。定时同步工作流也会在
+server 契约发生变化时创建更新 PR。
+
 ## 安装
 
 发布包：[GitHub Releases](https://github.com/Life-USTC/CLI/releases)。或：

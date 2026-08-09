@@ -1,0 +1,93 @@
+name: Sync OpenAPI contract
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+    inputs:
+      server_sha:
+        description: Exact Life-USTC/server commit SHA (defaults to current main)
+        required: false
+        type: string
+  repository_dispatch:
+    types: [openapi-updated]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: openapi-contract-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve immutable server commit
+        id: server
+        env:
+          DISPATCH_SHA: ${{ github.event.client_payload.server_sha }}
+          INPUT_SHA: ${{ inputs.server_sha }}
+        run: |
+          explicit="${INPUT_SHA:-${DISPATCH_SHA:-}}"
+          if [[ -n "$explicit" ]]; then
+            if [[ ! "$explicit" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Explicit server_sha must be an exact 40-character lowercase commit SHA" >&2
+              exit 1
+            fi
+            sha="$explicit"
+          else
+            sha="$(git ls-remote https://github.com/Life-USTC/server.git refs/heads/main | awk '{print $1}')"
+            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Could not resolve Life-USTC/server main to an immutable commit" >&2
+              exit 1
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact server commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Life-USTC/server
+          ref: ${{ steps.server.outputs.sha }}
+          path: .openapi-server
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Sync contract and generated client
+        run: |
+          make sync-openapi OPENAPI_SERVER_DIR=.openapi-server SERVER_COMMIT=${{ steps.server.outputs.sha }}
+          ./scripts/openapi-contract verify
+          cmp -s .openapi-server/public/openapi.generated.json api/openapi.json
+          make generate
+
+      - name: Build, test, and vet
+        run: |
+          make build
+          make test
+          make vet
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.12.2
+
+      # Set OPENAPI_SYNC_TOKEN to a PAT or GitHub App token if automated PRs
+      # should trigger the repository's normal pull_request workflows.
+      - name: Open or update contract PR
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.OPENAPI_SYNC_TOKEN || github.token }}
+          branch: automation/openapi-contract
+          delete-branch: true
+          commit-message: "chore: sync OpenAPI contract"
+          title: "chore: sync OpenAPI contract"
+          body: |
+            Synchronizes the vendored OpenAPI contract and generated CLI client with an immutable `Life-USTC/server` commit.
+
+            The sync workflow completed build, race-enabled tests, vet, and lint before opening this PR. When it uses the default `GITHUB_TOKEN`, GitHub will not trigger a second pull-request CI run.

@@ -15,23 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve server OpenAPI ref
+      - name: Read pinned server commit
         id: server-openapi-ref
-        run: |
-          candidate="${SERVER_OPENAPI_REF:-${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}}"
-          if git ls-remote --exit-code --heads https://github.com/Life-USTC/server.git "$candidate" >/dev/null 2>&1; then
-            echo "ref=$candidate" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Server OpenAPI branch '$candidate' not found; falling back to main"
-            echo "ref=main" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "ref=$(./scripts/openapi-contract pinned-sha)" >> "$GITHUB_OUTPUT"
 
       - name: Checkout server OpenAPI source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Life-USTC/server
           ref: ${{ steps.server-openapi-ref.outputs.ref }}
-          path: server
+          path: .openapi-server
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -45,7 +38,8 @@ jobs:
 
       - name: Check generated code is up-to-date
         run: |
-          make sync-openapi generate OPENAPI_SOURCE=server/public/openapi.generated.json
+          make check-openapi-sync OPENAPI_SERVER_DIR=.openapi-server
+          make generate
           git diff --exit-code
 
   lint:
