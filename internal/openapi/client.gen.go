@@ -17833,6 +17833,7 @@ type WorkspaceCalendarFeedExportResponse struct {
 	JSON401      *OpenApiErrorSchema
 	JSON403      *OpenApiErrorSchema
 	JSON404      *OpenApiErrorSchema
+	JSON410      *OpenApiErrorSchema
 }
 
 // Status returns HTTPResponse.Status
@@ -21167,6 +21168,13 @@ func ParseWorkspaceCalendarFeedExportResponse(rsp *http.Response) (*WorkspaceCal
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 410:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON410 = &dest
 
 	}
 

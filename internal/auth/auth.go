@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Life-USTC/CLI/internal/config"
@@ -254,6 +255,35 @@ func callbackRedirectURI(addr net.Addr) string {
 	return fmt.Sprintf("http://%s/callback", addr.String())
 }
 
+type callbackResult struct {
+	code  string
+	state string
+	err   string
+}
+
+func oauthCallbackHandler(results chan<- callbackResult) http.HandlerFunc {
+	var delivered atomic.Bool
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !delivered.CompareAndSwap(false, true) {
+			http.Error(w, "Authentication callback was already received. You can close this tab.", http.StatusConflict)
+			return
+		}
+		q := r.URL.Query()
+		result := callbackResult{code: q.Get("code"), state: q.Get("state"), err: q.Get("error")}
+		select {
+		case results <- result:
+		default:
+			http.Error(w, "Authentication callback could not be delivered. Return to the terminal and retry.", http.StatusServiceUnavailable)
+			return
+		}
+		if result.err != "" {
+			_, _ = w.Write([]byte("<html><body><h2>Authentication failed</h2><p>You can close this tab.</p></body></html>"))
+			return
+		}
+		_, _ = w.Write([]byte("<html><body><h2>Authentication successful!</h2><p>You can close this tab and return to the terminal.</p></body></html>"))
+	}
+}
+
 // Login runs the full OAuth2 Authorization Code + PKCE flow.
 // Returns a credential to store.
 func Login(server string) (*config.Credential, error) {
@@ -278,6 +308,7 @@ func Login(server string) (*config.Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = listener.Close() }()
 	redirectURI := callbackRedirectURI(listener.Addr())
 
 	// Register client
@@ -314,28 +345,17 @@ func Login(server string) (*config.Credential, error) {
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
 
-	// Channel for callback result
-	type callbackResult struct {
-		code  string
-		state string
-		err   string
-	}
 	ch := make(chan callbackResult, 1)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		if e := q.Get("error"); e != "" {
-			ch <- callbackResult{err: e}
-			_, _ = w.Write([]byte("<html><body><h2>Authentication failed</h2><p>You can close this tab.</p></body></html>"))
-			return
-		}
-		ch <- callbackResult{code: q.Get("code"), state: q.Get("state")}
-		_, _ = w.Write([]byte("<html><body><h2>Authentication successful!</h2><p>You can close this tab and return to the terminal.</p></body></html>"))
-	})
+	mux.HandleFunc("/callback", oauthCallbackHandler(ch))
 	srv := &http.Server{Handler: mux}
 	go func() { _ = srv.Serve(listener) }()
-	defer func() { _ = srv.Shutdown(context.Background()) }()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
 
 	// Open browser
 	fmt.Println()
