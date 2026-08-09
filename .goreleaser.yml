@@ -1,5 +1,10 @@
 version: 2
 
+before:
+  hooks:
+    - make check-openapi-provenance generate
+    - git diff --exit-code
+
 builds:
   - main: ./cmd/life-ustc
     binary: life-ustc
