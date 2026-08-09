@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"testing"
@@ -12,6 +14,52 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
+
+func TestOAuthCallbackHandlerDeliversOnlyFirstRequest(t *testing.T) {
+	results := make(chan callbackResult, 1)
+	handler := oauthCallbackHandler(results)
+
+	first := httptest.NewRecorder()
+	handler(first, httptest.NewRequest(http.MethodGet, "/callback?code=first&state=state-1", nil))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first status = %d", first.Code)
+	}
+	result := <-results
+	if result.code != "first" || result.state != "state-1" || result.err != "" {
+		t.Fatalf("result = %#v", result)
+	}
+
+	repeated := httptest.NewRecorder()
+	handler(repeated, httptest.NewRequest(http.MethodGet, "/callback?code=second&state=state-2", nil))
+	if repeated.Code != http.StatusConflict {
+		t.Fatalf("repeated status = %d, want %d", repeated.Code, http.StatusConflict)
+	}
+	select {
+	case extra := <-results:
+		t.Fatalf("unexpected repeated result: %#v", extra)
+	default:
+	}
+}
+
+func TestOAuthCallbackHandlerDoesNotBlockWhenResultBufferIsFull(t *testing.T) {
+	results := make(chan callbackResult, 1)
+	results <- callbackResult{code: "occupied"}
+	handler := oauthCallbackHandler(results)
+	done := make(chan struct{})
+	response := httptest.NewRecorder()
+	go func() {
+		handler(response, httptest.NewRequest(http.MethodGet, "/callback?error=denied", nil))
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("callback handler blocked on a full result channel")
+	}
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusServiceUnavailable)
+	}
+}
 
 func TestCallbackRedirectURIMatchesLoopbackListener(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
