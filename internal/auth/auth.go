@@ -102,14 +102,17 @@ func oauthScopesFromMetadata(meta map[string]any) ([]string, error) {
 			return nil, fmt.Errorf("server OAuth metadata contains an invalid supported scope")
 		}
 		scope = strings.TrimSpace(scope)
+		if scope == "openid" || scope == "profile" || scope == "email" {
+			continue
+		}
 		if _, duplicate := seen[scope]; duplicate {
 			continue
 		}
 		seen[scope] = struct{}{}
 		scopes = append(scopes, scope)
 	}
-	if _, ok := seen["openid"]; !ok {
-		return nil, fmt.Errorf("server OAuth metadata does not support the required openid scope")
+	if len(scopes) == 0 {
+		return nil, fmt.Errorf("server OAuth metadata does not advertise usable API scopes")
 	}
 	return scopes, nil
 }
@@ -391,18 +394,8 @@ func Login(server string) (*config.Credential, error) {
 		return nil, fmt.Errorf("token exchange failed: %w", err)
 	}
 
-	vt := newVerifiedToken(tok)
-	if err := requireIDTokenForOpenID(effectiveTokenScope(vt, scope), vt.IDToken); err != nil {
-		return nil, err
-	}
-	issuer := stringFromMap(meta, "issuer")
-	if issuer == "" {
-		issuer = server
-	}
-	if err := vt.ValidateIDToken(issuer, clientID); err != nil {
-		return nil, err
-	}
-	return verifiedTokenToCredential(clientID, resource, vt, "", scope, time.Now())
+	token := newOAuthToken(tok)
+	return oauthTokenToCredential(clientID, resource, token, "", scope, time.Now())
 }
 
 // RefreshToken attempts to refresh the access token.
@@ -427,13 +420,6 @@ func RefreshToken(server string, cred *config.Credential) (*config.Credential, e
 		return nil, fmt.Errorf("refresh failed: %w", err)
 	}
 
-	vt := newVerifiedToken(tok)
-	issuer := stringFromMap(meta, "issuer")
-	if issuer == "" {
-		issuer = server
-	}
-	if err := vt.ValidateIDToken(issuer, cred.ClientID); err != nil {
-		return nil, err
-	}
-	return verifiedTokenToCredential(cred.ClientID, resource, vt, cred.RefreshToken, cred.Scope, time.Now())
+	token := newOAuthToken(tok)
+	return oauthTokenToCredential(cred.ClientID, resource, token, cred.RefreshToken, cred.Scope, time.Now())
 }
