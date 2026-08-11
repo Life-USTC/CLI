@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,75 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
+
+func TestRegisterPublicClientUsesNativeApplicationType(t *testing.T) {
+	requests := make(chan map[string]any, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		requests <- body
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"client_id":"client-1"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := registerPublicClient(
+		server.URL,
+		[]string{"http://127.0.0.1:46289/callback"},
+		[]string{"authorization_code", "refresh_token"},
+		[]string{"code"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := <-requests
+	if body["application_type"] != "native" {
+		t.Fatalf("application_type = %#v, want native", body["application_type"])
+	}
+	redirectURIs, ok := body["redirect_uris"].([]any)
+	if !ok || len(redirectURIs) != 1 || redirectURIs[0] != "http://127.0.0.1:46289/callback" {
+		t.Fatalf("redirect_uris = %#v", body["redirect_uris"])
+	}
+}
+
+func TestRegisterPublicClientOmitsUnusedDeviceRedirectMetadata(t *testing.T) {
+	requests := make(chan map[string]any, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		requests <- body
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"client_id":"device-client"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := registerPublicClient(
+		server.URL,
+		nil,
+		[]string{"urn:ietf:params:oauth:grant-type:device_code", "refresh_token"},
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := <-requests
+	if body["application_type"] != "native" {
+		t.Fatalf("application_type = %#v, want native", body["application_type"])
+	}
+	if _, ok := body["redirect_uris"]; ok {
+		t.Fatalf("redirect_uris should be omitted, got %#v", body["redirect_uris"])
+	}
+	if _, ok := body["response_types"]; ok {
+		t.Fatalf("response_types should be omitted, got %#v", body["response_types"])
+	}
+}
 
 func TestOAuthCallbackHandlerDeliversOnlyFirstRequest(t *testing.T) {
 	results := make(chan callbackResult, 1)

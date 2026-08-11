@@ -126,11 +126,16 @@ func oauthResource(server string, meta map[string]any) string {
 func registerPublicClient(endpoint string, redirectURIs, grantTypes, responseTypes []string) (map[string]any, error) {
 	body := map[string]any{
 		"client_name":                "life-ustc-cli",
-		"redirect_uris":              redirectURIs,
+		"application_type":           "native",
 		"token_endpoint_auth_method": "none",
 		"grant_types":                grantTypes,
-		"response_types":             responseTypes,
 		"scope":                      oauthScope,
+	}
+	if len(redirectURIs) > 0 {
+		body["redirect_uris"] = redirectURIs
+	}
+	if len(responseTypes) > 0 {
+		body["response_types"] = responseTypes
 	}
 	data, _ := json.Marshal(body)
 	client := &http.Client{Timeout: 15 * time.Second}
