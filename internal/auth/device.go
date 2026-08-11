@@ -93,16 +93,6 @@ func LoginDeviceCode(server string) (*config.Credential, error) {
 		return nil, fmt.Errorf("device authorization failed: %w", err)
 	}
 
-	vt := newVerifiedToken(tok)
-	if err := requireIDTokenForOpenID(effectiveTokenScope(vt, scope), vt.IDToken); err != nil {
-		return nil, err
-	}
-	issuer := stringFromMap(meta, "issuer")
-	if issuer == "" {
-		issuer = server
-	}
-	if err := vt.ValidateIDToken(issuer, clientID); err != nil {
-		return nil, err
-	}
-	return verifiedTokenToCredential(clientID, resource, vt, "", scope, time.Now())
+	token := newOAuthToken(tok)
+	return oauthTokenToCredential(clientID, resource, token, "", scope, time.Now())
 }

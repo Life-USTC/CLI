@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -13,8 +11,7 @@ import (
 	"time"
 
 	"github.com/Life-USTC/CLI/internal/config"
-	"github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
+	"golang.org/x/oauth2"
 )
 
 func TestRegisterPublicClientUsesNativeApplicationType(t *testing.T) {
@@ -34,7 +31,7 @@ func TestRegisterPublicClientUsesNativeApplicationType(t *testing.T) {
 
 	_, err := registerPublicClient(
 		server.URL,
-		[]string{"openid", "profile", "workspace.todo:read"},
+		[]string{"offline_access", "workspace.todo:read"},
 		[]string{"http://127.0.0.1:46289/callback"},
 		[]string{"authorization_code", "refresh_token"},
 		[]string{"code"},
@@ -46,7 +43,7 @@ func TestRegisterPublicClientUsesNativeApplicationType(t *testing.T) {
 	if body["application_type"] != "native" {
 		t.Fatalf("application_type = %#v, want native", body["application_type"])
 	}
-	if body["scope"] != "openid profile workspace.todo:read" {
+	if body["scope"] != "offline_access workspace.todo:read" {
 		t.Fatalf("scope = %#v", body["scope"])
 	}
 	redirectURIs, ok := body["redirect_uris"].([]any)
@@ -71,7 +68,7 @@ func TestRegisterPublicClientOmitsUnusedDeviceRedirectMetadata(t *testing.T) {
 
 	_, err := registerPublicClient(
 		server.URL,
-		[]string{"openid", "profile", "workspace.todo:read"},
+		[]string{"offline_access", "workspace.todo:read"},
 		nil,
 		[]string{"urn:ietf:params:oauth:grant-type:device_code", "refresh_token"},
 		nil,
@@ -82,6 +79,9 @@ func TestRegisterPublicClientOmitsUnusedDeviceRedirectMetadata(t *testing.T) {
 	body := <-requests
 	if body["application_type"] != "native" {
 		t.Fatalf("application_type = %#v, want native", body["application_type"])
+	}
+	if body["scope"] != "offline_access workspace.todo:read" {
+		t.Fatalf("scope = %#v", body["scope"])
 	}
 	if _, ok := body["redirect_uris"]; ok {
 		t.Fatalf("redirect_uris should be omitted, got %#v", body["redirect_uris"])
@@ -96,6 +96,8 @@ func TestOAuthScopesFromMetadata(t *testing.T) {
 		"scopes_supported": []any{
 			"openid",
 			"profile",
+			"email",
+			"offline_access",
 			"workspace.todo:read",
 			"workspace.todo:write",
 			"workspace.todo:read",
@@ -105,8 +107,7 @@ func TestOAuthScopesFromMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
-		"openid",
-		"profile",
+		"offline_access",
 		"workspace.todo:read",
 		"workspace.todo:write",
 	}
@@ -128,9 +129,9 @@ func TestOAuthScopesFromMetadataRejectsMissingOrInvalidScopes(t *testing.T) {
 		{name: "missing", meta: map[string]any{}},
 		{name: "wrong type", meta: map[string]any{"scopes_supported": "openid profile"}},
 		{name: "empty", meta: map[string]any{"scopes_supported": []any{}}},
-		{name: "invalid item", meta: map[string]any{"scopes_supported": []any{"openid", 42}}},
-		{name: "blank item", meta: map[string]any{"scopes_supported": []any{"openid", " "}}},
-		{name: "missing openid", meta: map[string]any{"scopes_supported": []any{"profile"}}},
+		{name: "invalid item", meta: map[string]any{"scopes_supported": []any{"offline_access", 42}}},
+		{name: "blank item", meta: map[string]any{"scopes_supported": []any{"offline_access", " "}}},
+		{name: "identity only", meta: map[string]any{"scopes_supported": []any{"openid", "profile", "email"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,6 +139,95 @@ func TestOAuthScopesFromMetadataRejectsMissingOrInvalidScopes(t *testing.T) {
 				t.Fatal("expected invalid metadata error")
 			}
 		})
+	}
+}
+
+func TestLoginDeviceCodeAcceptsOAuthTokenWithoutIDToken(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	registrationScopes := make(chan string, 1)
+	deviceScopes := make(chan string, 1)
+	tokenScopes := make(chan string, 1)
+
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/.well-known/oauth-authorization-server/api/auth":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"issuer":                        server.URL + "/api/auth",
+				"registration_endpoint":         server.URL + "/api/auth/oauth2/register",
+				"device_authorization_endpoint": server.URL + "/api/auth/oauth2/device-authorization",
+				"token_endpoint":                server.URL + "/api/auth/oauth2/token",
+				"scopes_supported": []string{
+					"openid",
+					"profile",
+					"email",
+					"offline_access",
+					"workspace.todo:read",
+				},
+			})
+		case "/api/auth/oauth2/register":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			registrationScope, _ := body["scope"].(string)
+			registrationScopes <- registrationScope
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"client_id":"device-client"}`))
+		case "/api/auth/oauth2/device-authorization":
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			deviceScopes <- r.Form.Get("scope")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"device_code":               "device-code",
+				"user_code":                 "TEST-CODE",
+				"verification_uri":          server.URL + "/oauth/device",
+				"verification_uri_complete": server.URL + "/oauth/device?code=TEST-CODE",
+				"expires_in":                60,
+				"interval":                  1,
+			})
+		case "/api/auth/oauth2/token":
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			tokenScopes <- r.Form.Get("scope")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token":  "device-access",
+				"refresh_token": "device-refresh",
+				"token_type":    "Bearer",
+				"expires_in":    3600,
+				"scope":         "offline_access workspace.todo:read",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	cred, err := LoginDeviceCode(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred.AccessToken != "device-access" || cred.RefreshToken != "device-refresh" {
+		t.Fatalf("credential = %#v", cred)
+	}
+	const wantScope = "offline_access workspace.todo:read"
+	if got := <-registrationScopes; got != wantScope {
+		t.Fatalf("registration scope = %q, want %q", got, wantScope)
+	}
+	if got := <-deviceScopes; got != wantScope {
+		t.Fatalf("device authorization scope = %q, want %q", got, wantScope)
+	}
+	if got := <-tokenScopes; got != wantScope {
+		t.Fatalf("token scope = %q, want %q", got, wantScope)
+	}
+	if cred.Scope != wantScope {
+		t.Fatalf("credential scope = %q, want %q", cred.Scope, wantScope)
 	}
 }
 
@@ -211,12 +301,12 @@ func TestCallbackRedirectURIMatchesLoopbackListener(t *testing.T) {
 	}
 }
 
-func TestVerifiedTokenToCredentialUsesFallbacks(t *testing.T) {
-	vt := &VerifiedToken{
+func TestOAuthTokenToCredentialUsesFallbacks(t *testing.T) {
+	token := &oauthToken{
 		AccessToken: "access",
 		ExpiresIn:   120,
 	}
-	cred, err := verifiedTokenToCredential("client", "https://example.test", vt, "refresh", "openid", time.Now())
+	cred, err := oauthTokenToCredential("client", "https://example.test", token, "refresh", "openid", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,38 +321,23 @@ func TestVerifiedTokenToCredentialUsesFallbacks(t *testing.T) {
 	}
 }
 
-func TestVerifiedTokenToCredentialRequiresAccessToken(t *testing.T) {
-	vt := &VerifiedToken{}
-	if _, err := verifiedTokenToCredential("client", "resource", vt, "", "", time.Now()); err == nil {
+func TestOAuthTokenToCredentialRequiresAccessToken(t *testing.T) {
+	token := &oauthToken{}
+	if _, err := oauthTokenToCredential("client", "resource", token, "", "", time.Now()); err == nil {
 		t.Fatal("expected missing access token error")
 	}
 }
 
-func TestVerifiedTokenToCredentialNilGuard(t *testing.T) {
-	if _, err := verifiedTokenToCredential("client", "resource", nil, "", "", time.Now()); err == nil {
+func TestOAuthTokenToCredentialNilGuard(t *testing.T) {
+	if _, err := oauthTokenToCredential("client", "resource", nil, "", "", time.Now()); err == nil {
 		t.Fatal("expected error for nil token")
 	}
 }
 
-func TestRequireIDTokenForOpenID(t *testing.T) {
-	if err := requireIDTokenForOpenID("openid profile", ""); err == nil {
-		t.Fatal("expected error when openid scope requested without id_token")
-	}
-	if err := requireIDTokenForOpenID("profile email", ""); err != nil {
-		t.Fatalf("unexpected error when openid not requested: %v", err)
-	}
-	if err := requireIDTokenForOpenID("openid", "idtoken"); err != nil {
-		t.Fatalf("unexpected error when id_token present: %v", err)
-	}
-}
-
 func TestEffectiveTokenScopePrefersGrantedScope(t *testing.T) {
-	vt := &VerifiedToken{Scope: "profile workspace.todo:read"}
-	if got := effectiveTokenScope(vt, "openid profile workspace.todo:read"); got != "profile workspace.todo:read" {
+	token := &oauthToken{Scope: "profile workspace.todo:read"}
+	if got := effectiveTokenScope(token, "openid profile workspace.todo:read"); got != "profile workspace.todo:read" {
 		t.Fatalf("effective scope = %q", got)
-	}
-	if err := requireIDTokenForOpenID(effectiveTokenScope(vt, "openid profile"), ""); err != nil {
-		t.Fatalf("reduced grant without openid should not require an ID token: %v", err)
 	}
 }
 
@@ -299,7 +374,7 @@ func TestRefreshTokenDoesNotRequireNewIDToken(t *testing.T) {
 	cred, err := RefreshToken(server.URL, &config.Credential{
 		ClientID:     "client-1",
 		RefreshToken: "refresh-1",
-		Scope:        "openid profile workspace.todo:read",
+		Scope:        "offline_access workspace.todo:read",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -307,46 +382,35 @@ func TestRefreshTokenDoesNotRequireNewIDToken(t *testing.T) {
 	if cred.AccessToken != "next-access" || cred.RefreshToken != "refresh-1" {
 		t.Fatalf("credential = %#v", cred)
 	}
-	if cred.Scope != "openid profile workspace.todo:read" {
+	if cred.Scope != "offline_access workspace.todo:read" {
 		t.Fatalf("scope = %q", cred.Scope)
 	}
 }
 
-func TestValidateIDTokenAudienceIsClientID(t *testing.T) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+func TestOAuthAccessTokenDoesNotRequireIDToken(t *testing.T) {
+	token := (&oauth2.Token{
+		AccessToken:  "device-access",
+		RefreshToken: "device-refresh",
+		TokenType:    "Bearer",
+	}).WithExtra(map[string]any{
+		"expires_in": 3600,
+		"scope":      "openid profile workspace.todo:read",
+	})
+	cred, err := oauthTokenToCredential(
+		"device-client",
+		"https://life.example/api/auth",
+		newOAuthToken(token),
+		"",
+		"",
+		time.Now(),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: key}, nil)
-	if err != nil {
-		t.Fatal(err)
+	if cred.AccessToken != "device-access" || cred.RefreshToken != "device-refresh" {
+		t.Fatalf("credential = %#v", cred)
 	}
-	build := func(aud any) string {
-		t.Helper()
-		claims := map[string]any{
-			"iss": "https://issuer.test",
-			"aud": aud,
-			"exp": time.Now().Add(time.Hour).Unix(),
-		}
-		s, err := jwt.Signed(signer).Claims(claims).Serialize()
-		if err != nil {
-			t.Fatal(err)
-		}
-		return s
-	}
-
-	vt := &VerifiedToken{IDToken: build("client-id-123")}
-	if err := vt.ValidateIDToken("https://issuer.test", "client-id-123"); err != nil {
-		t.Fatalf("expected client_id audience to validate: %v", err)
-	}
-
-	vt.IDToken = build("https://server.test")
-	if err := vt.ValidateIDToken("https://issuer.test", "client-id-123"); err == nil {
-		t.Fatal("expected server URL audience to fail against client_id expectation")
-	}
-
-	vt.IDToken = build([]string{"client-id-123", "other"})
-	if err := vt.ValidateIDToken("https://issuer.test", "client-id-123"); err != nil {
-		t.Fatalf("expected audience list containing client_id to validate: %v", err)
+	if cred.Scope != "openid profile workspace.todo:read" {
+		t.Fatalf("scope = %q", cred.Scope)
 	}
 }
