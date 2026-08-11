@@ -143,6 +143,13 @@ func requireIDTokenForOpenID(scope, idToken string) error {
 	return nil
 }
 
+func effectiveTokenScope(token *VerifiedToken, fallback string) string {
+	if token != nil && strings.TrimSpace(token.Scope) != "" {
+		return strings.TrimSpace(token.Scope)
+	}
+	return strings.TrimSpace(fallback)
+}
+
 func verifiedTokenToCredential(clientID, resource string, vt *VerifiedToken, fallbackRefresh, fallbackScope string, now time.Time) (*config.Credential, error) {
 	if vt == nil {
 		return nil, errors.New("token response is nil")
@@ -159,10 +166,7 @@ func verifiedTokenToCredential(clientID, resource string, vt *VerifiedToken, fal
 	if refreshToken == "" {
 		refreshToken = fallbackRefresh
 	}
-	scope := strings.TrimSpace(vt.Scope)
-	if scope == "" {
-		scope = fallbackScope
-	}
+	scope := effectiveTokenScope(vt, fallbackScope)
 	return &config.Credential{
 		ClientID:     clientID,
 		AccessToken:  accessToken,

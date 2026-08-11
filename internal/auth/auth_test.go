@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Life-USTC/CLI/internal/config"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
@@ -33,6 +34,7 @@ func TestRegisterPublicClientUsesNativeApplicationType(t *testing.T) {
 
 	_, err := registerPublicClient(
 		server.URL,
+		[]string{"openid", "profile", "workspace.todo:read"},
 		[]string{"http://127.0.0.1:46289/callback"},
 		[]string{"authorization_code", "refresh_token"},
 		[]string{"code"},
@@ -43,6 +45,9 @@ func TestRegisterPublicClientUsesNativeApplicationType(t *testing.T) {
 	body := <-requests
 	if body["application_type"] != "native" {
 		t.Fatalf("application_type = %#v, want native", body["application_type"])
+	}
+	if body["scope"] != "openid profile workspace.todo:read" {
+		t.Fatalf("scope = %#v", body["scope"])
 	}
 	redirectURIs, ok := body["redirect_uris"].([]any)
 	if !ok || len(redirectURIs) != 1 || redirectURIs[0] != "http://127.0.0.1:46289/callback" {
@@ -66,6 +71,7 @@ func TestRegisterPublicClientOmitsUnusedDeviceRedirectMetadata(t *testing.T) {
 
 	_, err := registerPublicClient(
 		server.URL,
+		[]string{"openid", "profile", "workspace.todo:read"},
 		nil,
 		[]string{"urn:ietf:params:oauth:grant-type:device_code", "refresh_token"},
 		nil,
@@ -82,6 +88,56 @@ func TestRegisterPublicClientOmitsUnusedDeviceRedirectMetadata(t *testing.T) {
 	}
 	if _, ok := body["response_types"]; ok {
 		t.Fatalf("response_types should be omitted, got %#v", body["response_types"])
+	}
+}
+
+func TestOAuthScopesFromMetadata(t *testing.T) {
+	scopes, err := oauthScopesFromMetadata(map[string]any{
+		"scopes_supported": []any{
+			"openid",
+			"profile",
+			"workspace.todo:read",
+			"workspace.todo:write",
+			"workspace.todo:read",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"openid",
+		"profile",
+		"workspace.todo:read",
+		"workspace.todo:write",
+	}
+	if len(scopes) != len(want) {
+		t.Fatalf("scopes = %#v, want %#v", scopes, want)
+	}
+	for i := range want {
+		if scopes[i] != want[i] {
+			t.Fatalf("scopes = %#v, want %#v", scopes, want)
+		}
+	}
+}
+
+func TestOAuthScopesFromMetadataRejectsMissingOrInvalidScopes(t *testing.T) {
+	tests := []struct {
+		name string
+		meta map[string]any
+	}{
+		{name: "missing", meta: map[string]any{}},
+		{name: "wrong type", meta: map[string]any{"scopes_supported": "openid profile"}},
+		{name: "empty", meta: map[string]any{"scopes_supported": []any{}}},
+		{name: "invalid item", meta: map[string]any{"scopes_supported": []any{"openid", 42}}},
+		{name: "blank item", meta: map[string]any{"scopes_supported": []any{"openid", " "}}},
+		{name: "missing openid", meta: map[string]any{"scopes_supported": []any{"profile"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := oauthScopesFromMetadata(tt.meta); err == nil {
+				t.Fatal("expected invalid metadata error")
+			}
+		})
 	}
 }
 
@@ -197,6 +253,62 @@ func TestRequireIDTokenForOpenID(t *testing.T) {
 	}
 	if err := requireIDTokenForOpenID("openid", "idtoken"); err != nil {
 		t.Fatalf("unexpected error when id_token present: %v", err)
+	}
+}
+
+func TestEffectiveTokenScopePrefersGrantedScope(t *testing.T) {
+	vt := &VerifiedToken{Scope: "profile workspace.todo:read"}
+	if got := effectiveTokenScope(vt, "openid profile workspace.todo:read"); got != "profile workspace.todo:read" {
+		t.Fatalf("effective scope = %q", got)
+	}
+	if err := requireIDTokenForOpenID(effectiveTokenScope(vt, "openid profile"), ""); err != nil {
+		t.Fatalf("reduced grant without openid should not require an ID token: %v", err)
+	}
+}
+
+func TestRefreshTokenDoesNotRequireNewIDToken(t *testing.T) {
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/.well-known/oauth-authorization-server/api/auth":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"issuer":         server.URL + "/api/auth",
+				"token_endpoint": server.URL + "/api/auth/oauth2/token",
+			})
+		case "/api/auth/oauth2/token":
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if r.Form.Get("grant_type") != "refresh_token" {
+				http.Error(w, "unexpected grant", http.StatusBadRequest)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "next-access",
+				"token_type":   "Bearer",
+				"expires_in":   3600,
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	cred, err := RefreshToken(server.URL, &config.Credential{
+		ClientID:     "client-1",
+		RefreshToken: "refresh-1",
+		Scope:        "openid profile workspace.todo:read",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred.AccessToken != "next-access" || cred.RefreshToken != "refresh-1" {
+		t.Fatalf("credential = %#v", cred)
+	}
+	if cred.Scope != "openid profile workspace.todo:read" {
+		t.Fatalf("scope = %q", cred.Scope)
 	}
 }
 
