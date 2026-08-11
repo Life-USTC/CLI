@@ -38,9 +38,9 @@ func LoginDeviceCode(server string) (*config.Credential, error) {
 	// Register client
 	clientInfo, err := registerPublicClient(
 		regEndpoint,
-		[]string{"http://localhost/callback"},
+		nil,
 		[]string{"urn:ietf:params:oauth:grant-type:device_code", "refresh_token"},
-		[]string{"code"},
+		nil,
 	)
 	if err != nil {
 		return nil, err
