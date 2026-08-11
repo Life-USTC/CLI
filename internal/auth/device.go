@@ -34,10 +34,16 @@ func LoginDeviceCode(server string) (*config.Credential, error) {
 		return nil, fmt.Errorf("server does not advertise a registration_endpoint")
 	}
 	resource := oauthResource(server, meta)
+	scopes, err := oauthScopesFromMetadata(meta)
+	if err != nil {
+		return nil, err
+	}
+	scope := strings.Join(scopes, " ")
 
 	// Register client
 	clientInfo, err := registerPublicClient(
 		regEndpoint,
+		scopes,
 		nil,
 		[]string{"urn:ietf:params:oauth:grant-type:device_code", "refresh_token"},
 		nil,
@@ -49,7 +55,7 @@ func LoginDeviceCode(server string) (*config.Credential, error) {
 
 	conf := &oauth2.Config{
 		ClientID: clientID,
-		Scopes:   strings.Fields(oauthScope),
+		Scopes:   scopes,
 		Endpoint: oauth2.Endpoint{
 			DeviceAuthURL: deviceEndpoint,
 			TokenURL:      tokenEndpoint,
@@ -88,7 +94,7 @@ func LoginDeviceCode(server string) (*config.Credential, error) {
 	}
 
 	vt := newVerifiedToken(tok)
-	if err := requireIDTokenForOpenID(oauthScope, vt.IDToken); err != nil {
+	if err := requireIDTokenForOpenID(effectiveTokenScope(vt, scope), vt.IDToken); err != nil {
 		return nil, err
 	}
 	issuer := stringFromMap(meta, "issuer")
@@ -98,5 +104,5 @@ func LoginDeviceCode(server string) (*config.Credential, error) {
 	if err := vt.ValidateIDToken(issuer, clientID); err != nil {
 		return nil, err
 	}
-	return verifiedTokenToCredential(clientID, resource, vt, "", oauthScope, time.Now())
+	return verifiedTokenToCredential(clientID, resource, vt, "", scope, time.Now())
 }

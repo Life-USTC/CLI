@@ -23,41 +23,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var oauthScope = strings.Join([]string{
-	"openid",
-	"profile",
-	"email",
-	"offline_access",
-	"me:read",
-	"me:write",
-	"todo:read",
-	"todo:write",
-	"homework:read",
-	"homework:write",
-	"subscription:read",
-	"subscription:write",
-	"comment:read",
-	"comment:write",
-	"description:read",
-	"description:write",
-	"upload:read",
-	"upload:write",
-	"dashboard:read",
-	"dashboard:write",
-	"bus:read",
-	"bus:write",
-	"course:read",
-	"course:write",
-	"section:read",
-	"section:write",
-	"teacher:read",
-	"teacher:write",
-	"schedule:read",
-	"schedule:write",
-	"exam:read",
-	"exam:write",
-}, " ")
-
 func b64url(data []byte) string {
 	return base64.RawURLEncoding.EncodeToString(data)
 }
@@ -123,13 +88,39 @@ func oauthResource(server string, meta map[string]any) string {
 	return strings.TrimRight(server, "/")
 }
 
-func registerPublicClient(endpoint string, redirectURIs, grantTypes, responseTypes []string) (map[string]any, error) {
+func oauthScopesFromMetadata(meta map[string]any) ([]string, error) {
+	rawScopes, ok := meta["scopes_supported"].([]any)
+	if !ok || len(rawScopes) == 0 {
+		return nil, fmt.Errorf("server OAuth metadata does not advertise scopes_supported")
+	}
+
+	scopes := make([]string, 0, len(rawScopes))
+	seen := make(map[string]struct{}, len(rawScopes))
+	for _, rawScope := range rawScopes {
+		scope, ok := rawScope.(string)
+		if !ok || strings.TrimSpace(scope) == "" {
+			return nil, fmt.Errorf("server OAuth metadata contains an invalid supported scope")
+		}
+		scope = strings.TrimSpace(scope)
+		if _, duplicate := seen[scope]; duplicate {
+			continue
+		}
+		seen[scope] = struct{}{}
+		scopes = append(scopes, scope)
+	}
+	if _, ok := seen["openid"]; !ok {
+		return nil, fmt.Errorf("server OAuth metadata does not support the required openid scope")
+	}
+	return scopes, nil
+}
+
+func registerPublicClient(endpoint string, scopes, redirectURIs, grantTypes, responseTypes []string) (map[string]any, error) {
 	body := map[string]any{
 		"client_name":                "life-ustc-cli",
 		"application_type":           "native",
 		"token_endpoint_auth_method": "none",
 		"grant_types":                grantTypes,
-		"scope":                      oauthScope,
+		"scope":                      strings.Join(scopes, " "),
 	}
 	if len(redirectURIs) > 0 {
 		body["redirect_uris"] = redirectURIs
@@ -155,9 +146,10 @@ func registerPublicClient(endpoint string, redirectURIs, grantTypes, responseTyp
 	return result, nil
 }
 
-func registerClient(endpoint, redirectURI string) (map[string]any, error) {
+func registerClient(endpoint, redirectURI string, scopes []string) (map[string]any, error) {
 	return registerPublicClient(
 		endpoint,
+		scopes,
 		[]string{redirectURI},
 		[]string{"authorization_code", "refresh_token"},
 		[]string{"code"},
@@ -307,6 +299,11 @@ func Login(server string) (*config.Credential, error) {
 		return nil, fmt.Errorf("server does not advertise a registration_endpoint")
 	}
 	resource := oauthResource(server, meta)
+	scopes, err := oauthScopesFromMetadata(meta)
+	if err != nil {
+		return nil, err
+	}
+	scope := strings.Join(scopes, " ")
 
 	// Start local callback server
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -317,7 +314,7 @@ func Login(server string) (*config.Credential, error) {
 	redirectURI := callbackRedirectURI(listener.Addr())
 
 	// Register client
-	clientInfo, err := registerClient(regEndpoint, redirectURI)
+	clientInfo, err := registerClient(regEndpoint, redirectURI, scopes)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +333,7 @@ func Login(server string) (*config.Credential, error) {
 	conf := &oauth2.Config{
 		ClientID:    clientID,
 		RedirectURL: redirectURI,
-		Scopes:      strings.Fields(oauthScope),
+		Scopes:      scopes,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  authEndpoint,
 			TokenURL: tokenEndpoint,
@@ -395,7 +392,7 @@ func Login(server string) (*config.Credential, error) {
 	}
 
 	vt := newVerifiedToken(tok)
-	if err := requireIDTokenForOpenID(oauthScope, vt.IDToken); err != nil {
+	if err := requireIDTokenForOpenID(effectiveTokenScope(vt, scope), vt.IDToken); err != nil {
 		return nil, err
 	}
 	issuer := stringFromMap(meta, "issuer")
@@ -405,7 +402,7 @@ func Login(server string) (*config.Credential, error) {
 	if err := vt.ValidateIDToken(issuer, clientID); err != nil {
 		return nil, err
 	}
-	return verifiedTokenToCredential(clientID, resource, vt, "", oauthScope, time.Now())
+	return verifiedTokenToCredential(clientID, resource, vt, "", scope, time.Now())
 }
 
 // RefreshToken attempts to refresh the access token.
@@ -431,9 +428,6 @@ func RefreshToken(server string, cred *config.Credential) (*config.Credential, e
 	}
 
 	vt := newVerifiedToken(tok)
-	if err := requireIDTokenForOpenID(oauthScope, vt.IDToken); err != nil {
-		return nil, err
-	}
 	issuer := stringFromMap(meta, "issuer")
 	if issuer == "" {
 		issuer = server
