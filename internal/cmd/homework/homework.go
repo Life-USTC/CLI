@@ -237,7 +237,7 @@ func loadSubscribedSections(cmd *cobra.Command) ([]map[string]any, error) {
 		}
 	}
 
-	data, err = api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx()))
+	data, err = api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx(), nil))
 	if err != nil {
 		return nil, fmt.Errorf("could not load subscribed sections: %w", err)
 	}
@@ -386,7 +386,7 @@ func runMyHomeworkList(cmd *cobra.Command, opts myHomeworkListOpts) error {
 		}
 	} else {
 		// All subscribed sections — use the combined endpoint
-		data, err = api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx()))
+		data, err = api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx(), nil))
 		if err != nil {
 			return err
 		}
@@ -550,7 +550,7 @@ func fetchHomeworkPickList(cmd *cobra.Command, opts myHomeworkListOpts) ([]map[s
 	if err != nil {
 		return nil, err
 	}
-	data, err := api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx()))
+	data, err := api.ParseResponseRaw(c.GetSubscribedHomeworks(api.Ctx(), nil))
 	if err != nil {
 		return nil, err
 	}

@@ -75,7 +75,7 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		req.Header.Set("Authorization", "Bearer "+cred.AccessToken)
 	}
 
-	output.VerboseF("→ %s %s", req.Method, req.URL)
+	output.VerboseF("→ %s %s", req.Method, redactedRequestURL(req.URL))
 	start := time.Now()
 
 	resp, err := t.base.RoundTrip(req)
@@ -125,6 +125,21 @@ func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func redactedRequestURL(requestURL *url.URL) string {
+	if requestURL == nil {
+		return ""
+	}
+	redacted := *requestURL
+	const calendarFeedPrefix = "/api/calendar-feeds/"
+	if strings.HasPrefix(redacted.Path, calendarFeedPrefix) {
+		redacted.Path = calendarFeedPrefix + "[redacted].ics"
+		redacted.RawPath = ""
+		redacted.RawQuery = ""
+		redacted.ForceQuery = false
+	}
+	return redacted.String()
 }
 
 func (t *authTransport) ensureToken() bool {

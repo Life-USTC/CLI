@@ -88,13 +88,36 @@ func oauthResource(server string, meta map[string]any) string {
 	return strings.TrimRight(server, "/")
 }
 
+var cliOAuthScopes = []string{
+	"email",
+	"offline_access",
+	"account.profile:read",
+	"catalog.bus:read",
+	"catalog.course:read",
+	"catalog.link:read",
+	"catalog.schedule:read",
+	"catalog.section:read",
+	"catalog.teacher:read",
+	"community.comment:write",
+	"community.description:write",
+	"community.section-homework:write",
+	"workspace.bus-preferences:write",
+	"workspace.calendar-feed:read",
+	"workspace.homework:write",
+	"workspace.link-pin:write",
+	"workspace.overview:read",
+	"workspace.schedule:read",
+	"workspace.subscription:write",
+	"workspace.todo:write",
+	"workspace.upload:write",
+}
+
 func oauthScopesFromMetadata(meta map[string]any) ([]string, error) {
 	rawScopes, ok := meta["scopes_supported"].([]any)
 	if !ok || len(rawScopes) == 0 {
 		return nil, fmt.Errorf("server OAuth metadata does not advertise scopes_supported")
 	}
 
-	scopes := make([]string, 0, len(rawScopes))
 	seen := make(map[string]struct{}, len(rawScopes))
 	for _, rawScope := range rawScopes {
 		scope, ok := rawScope.(string)
@@ -102,19 +125,15 @@ func oauthScopesFromMetadata(meta map[string]any) ([]string, error) {
 			return nil, fmt.Errorf("server OAuth metadata contains an invalid supported scope")
 		}
 		scope = strings.TrimSpace(scope)
-		if scope == "openid" || scope == "profile" || scope == "email" {
-			continue
-		}
-		if _, duplicate := seen[scope]; duplicate {
-			continue
-		}
 		seen[scope] = struct{}{}
-		scopes = append(scopes, scope)
 	}
-	if len(scopes) == 0 {
-		return nil, fmt.Errorf("server OAuth metadata does not advertise usable API scopes")
+
+	for _, scope := range cliOAuthScopes {
+		if _, supported := seen[scope]; !supported {
+			return nil, fmt.Errorf("server OAuth metadata does not advertise required scope %q", scope)
+		}
 	}
-	return scopes, nil
+	return append([]string(nil), cliOAuthScopes...), nil
 }
 
 func registerPublicClient(endpoint string, scopes, redirectURIs, grantTypes, responseTypes []string) (map[string]any, error) {
@@ -255,6 +274,14 @@ func callbackRedirectURI(addr net.Addr) string {
 	return fmt.Sprintf("http://%s/callback", addr.String())
 }
 
+func browserAuthorizationURL(conf *oauth2.Config, state, challenge string) string {
+	return conf.AuthCodeURL(state,
+		oauth2.SetAuthURLParam("code_challenge", challenge),
+		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		oauth2.SetAuthURLParam("prompt", "login"),
+	)
+}
+
 type callbackResult struct {
 	code  string
 	state string
@@ -345,10 +372,7 @@ func Login(server string) (*config.Credential, error) {
 
 	ctx := oauth2Context(context.Background(), &http.Client{Timeout: 15 * time.Second})
 
-	authURL := conf.AuthCodeURL(state,
-		oauth2.SetAuthURLParam("code_challenge", challenge),
-		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
-	)
+	authURL := browserAuthorizationURL(conf, state, challenge)
 
 	ch := make(chan callbackResult, 1)
 

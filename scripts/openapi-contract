@@ -95,13 +95,6 @@ sync() {
     exit 1
   }
 
-  # Keep the existing immutable pin when an unrelated server commit leaves the
-  # contract unchanged. This avoids provenance-only update PRs.
-  if cmp -s "$source_spec" "$spec" && verify >/dev/null 2>&1; then
-    echo "OpenAPI contract is unchanged at pinned commit $(pinned_sha)"
-    return
-  fi
-
   cp "$source_spec" "$spec"
   hash="$(sha256_file "$spec")"
   printf '{\n  "repository": "%s",\n  "commit": "%s",\n  "sha256": "%s"\n}\n' \

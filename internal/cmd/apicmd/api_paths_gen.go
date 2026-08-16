@@ -11,6 +11,7 @@ var generatedAPIPaths = []string{
 	"/.well-known/openid-configuration",
 	"/.well-known/openid-configuration/api/auth",
 	"/.well-known/openid-configuration/api/mcp",
+	"/api/account/client-activity",
 	"/api/account/preferences",
 	"/api/account/profile",
 	"/api/admin/comments",

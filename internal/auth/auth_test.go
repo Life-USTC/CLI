@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,32 +93,49 @@ func TestRegisterPublicClientOmitsUnusedDeviceRedirectMetadata(t *testing.T) {
 }
 
 func TestOAuthScopesFromMetadata(t *testing.T) {
+	advertised := make([]any, 0, len(cliOAuthScopes)+3)
+	advertised = append(advertised,
+		"openid",
+		"profile",
+		"account.client-activity:read",
+	)
+	for _, scope := range cliOAuthScopes {
+		advertised = append(advertised, scope)
+	}
 	scopes, err := oauthScopesFromMetadata(map[string]any{
-		"scopes_supported": []any{
-			"openid",
-			"profile",
-			"email",
-			"offline_access",
-			"workspace.todo:read",
-			"workspace.todo:write",
-			"workspace.todo:read",
-		},
+		"scopes_supported": advertised,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{
-		"offline_access",
-		"workspace.todo:read",
-		"workspace.todo:write",
+	if strings.Join(scopes, " ") != strings.Join(cliOAuthScopes, " ") {
+		t.Fatalf("scopes = %#v, want %#v", scopes, cliOAuthScopes)
 	}
-	if len(scopes) != len(want) {
-		t.Fatalf("scopes = %#v, want %#v", scopes, want)
+	granted := make(map[string]bool, len(scopes))
+	for _, scope := range scopes {
+		granted[scope] = true
 	}
-	for i := range want {
-		if scopes[i] != want[i] {
-			t.Fatalf("scopes = %#v, want %#v", scopes, want)
+	for _, forbidden := range []string{"account.client-activity:read", "openid", "profile"} {
+		if granted[forbidden] {
+			t.Fatalf("scopes unexpectedly include %q: %#v", forbidden, scopes)
 		}
+	}
+}
+
+func TestOAuthScopesFromMetadataRequiresCalendarFeedAndEmail(t *testing.T) {
+	for _, missing := range []string{"email", "workspace.calendar-feed:read"} {
+		t.Run(missing, func(t *testing.T) {
+			advertised := make([]any, 0, len(cliOAuthScopes)-1)
+			for _, scope := range cliOAuthScopes {
+				if scope != missing {
+					advertised = append(advertised, scope)
+				}
+			}
+			_, err := oauthScopesFromMetadata(map[string]any{"scopes_supported": advertised})
+			if err == nil || !strings.Contains(err.Error(), missing) {
+				t.Fatalf("error = %v, want missing required scope %q", err, missing)
+			}
+		})
 	}
 }
 
@@ -131,7 +149,7 @@ func TestOAuthScopesFromMetadataRejectsMissingOrInvalidScopes(t *testing.T) {
 		{name: "empty", meta: map[string]any{"scopes_supported": []any{}}},
 		{name: "invalid item", meta: map[string]any{"scopes_supported": []any{"offline_access", 42}}},
 		{name: "blank item", meta: map[string]any{"scopes_supported": []any{"offline_access", " "}}},
-		{name: "identity only", meta: map[string]any{"scopes_supported": []any{"openid", "profile", "email"}}},
+		{name: "missing required", meta: map[string]any{"scopes_supported": []any{"openid", "profile", "email"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -158,13 +176,7 @@ func TestLoginDeviceCodeAcceptsOAuthTokenWithoutIDToken(t *testing.T) {
 				"registration_endpoint":         server.URL + "/api/auth/oauth2/register",
 				"device_authorization_endpoint": server.URL + "/api/auth/oauth2/device-authorization",
 				"token_endpoint":                server.URL + "/api/auth/oauth2/token",
-				"scopes_supported": []string{
-					"openid",
-					"profile",
-					"email",
-					"offline_access",
-					"workspace.todo:read",
-				},
+				"scopes_supported":              append([]string{"openid", "profile", "account.client-activity:read"}, cliOAuthScopes...),
 			})
 		case "/api/auth/oauth2/register":
 			var body map[string]any
@@ -201,7 +213,7 @@ func TestLoginDeviceCodeAcceptsOAuthTokenWithoutIDToken(t *testing.T) {
 				"refresh_token": "device-refresh",
 				"token_type":    "Bearer",
 				"expires_in":    3600,
-				"scope":         "offline_access workspace.todo:read",
+				"scope":         strings.Join(cliOAuthScopes, " "),
 			})
 		default:
 			http.NotFound(w, r)
@@ -216,7 +228,7 @@ func TestLoginDeviceCodeAcceptsOAuthTokenWithoutIDToken(t *testing.T) {
 	if cred.AccessToken != "device-access" || cred.RefreshToken != "device-refresh" {
 		t.Fatalf("credential = %#v", cred)
 	}
-	const wantScope = "offline_access workspace.todo:read"
+	wantScope := strings.Join(cliOAuthScopes, " ")
 	if got := <-registrationScopes; got != wantScope {
 		t.Fatalf("registration scope = %q, want %q", got, wantScope)
 	}
@@ -228,6 +240,24 @@ func TestLoginDeviceCodeAcceptsOAuthTokenWithoutIDToken(t *testing.T) {
 	}
 	if cred.Scope != wantScope {
 		t.Fatalf("credential scope = %q, want %q", cred.Scope, wantScope)
+	}
+}
+
+func TestBrowserAuthorizationURLForcesFreshLogin(t *testing.T) {
+	conf := &oauth2.Config{
+		ClientID: "client-1",
+		Endpoint: oauth2.Endpoint{AuthURL: "https://example.test/oauth/authorize"},
+	}
+	authURL, err := url.Parse(browserAuthorizationURL(conf, "state-1", "challenge-1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := authURL.Query()
+	if query.Get("prompt") != "login" {
+		t.Fatalf("prompt = %q, want login", query.Get("prompt"))
+	}
+	if query.Get("code_challenge") != "challenge-1" || query.Get("code_challenge_method") != "S256" {
+		t.Fatalf("PKCE query = %q", authURL.RawQuery)
 	}
 }
 
