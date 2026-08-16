@@ -29,15 +29,18 @@ func NewCmdProfile() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return output.OutputDetail(data, []output.FieldDef{
-				{Key: "id", Label: "ID"},
-				{Key: "name", Label: "Name"},
-				{Key: "email", Label: "Email"},
-				{Key: "username", Label: "Username"},
-				{Key: "isAdmin", Label: "Admin"},
-			}, "Profile")
+			return output.OutputDetail(data, profileFields(), "Profile")
 		},
 	}
 
 	return cmd
+}
+
+func profileFields() []output.FieldDef {
+	return []output.FieldDef{
+		{Key: "id", Label: "ID"},
+		{Key: "name", Label: "Name"},
+		{Key: "email", Label: "Email"},
+		{Key: "username", Label: "Username"},
+	}
 }

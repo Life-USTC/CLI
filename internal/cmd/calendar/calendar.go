@@ -74,12 +74,7 @@ func runCalendarGet(cmd *cobra.Command) error {
 		return nil
 	}
 
-	calURL, _ := sub["calendarUrl"].(string)
-	note, _ := sub["note"].(string)
-	output.KVWithTitle([]output.KVPair{
-		{Key: "URL", Value: output.Hyperlink(calURL, calURL)},
-		{Key: "Note", Value: note},
-	}, "Calendar subscription")
+	output.KVWithTitle(calendarSubscriptionDetails(sub), "Calendar subscription")
 
 	if sections, ok := sub["sections"].([]any); ok && len(sections) > 0 {
 		fmt.Println()
@@ -93,6 +88,18 @@ func runCalendarGet(cmd *cobra.Command) error {
 		})
 	}
 	return nil
+}
+
+func calendarSubscriptionDetails(sub map[string]any) []output.KVPair {
+	calendarFeed := "Unavailable (log in again to grant workspace.calendar-feed:read)"
+	if calendarURL, ok := sub["calendarUrl"].(string); ok && strings.TrimSpace(calendarURL) != "" {
+		calendarFeed = output.Hyperlink(calendarURL, calendarURL)
+	}
+	note, _ := sub["note"].(string)
+	return []output.KVPair{
+		{Key: "URL", Value: calendarFeed},
+		{Key: "Note", Value: note},
+	}
 }
 
 func newCmdGet() *cobra.Command {
