@@ -800,6 +800,27 @@ func (e DescriptionUpsertRequestSchema4TargetType) Valid() bool {
 	}
 }
 
+// Defines values for HomeworkAuditListResponseSchemaAuditLogsAction.
+const (
+	HomeworkAuditListResponseSchemaAuditLogsActionCreated HomeworkAuditListResponseSchemaAuditLogsAction = "created"
+	HomeworkAuditListResponseSchemaAuditLogsActionDeleted HomeworkAuditListResponseSchemaAuditLogsAction = "deleted"
+	HomeworkAuditListResponseSchemaAuditLogsActionUpdated HomeworkAuditListResponseSchemaAuditLogsAction = "updated"
+)
+
+// Valid indicates whether the value is a known member of the HomeworkAuditListResponseSchemaAuditLogsAction enum.
+func (e HomeworkAuditListResponseSchemaAuditLogsAction) Valid() bool {
+	switch e {
+	case HomeworkAuditListResponseSchemaAuditLogsActionCreated:
+		return true
+	case HomeworkAuditListResponseSchemaAuditLogsActionDeleted:
+		return true
+	case HomeworkAuditListResponseSchemaAuditLogsActionUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HomeworkCompletionBatchResponseSchemaResults0Success.
 const (
 	HomeworkCompletionBatchResponseSchemaResults0SuccessTrue HomeworkCompletionBatchResponseSchemaResults0Success = true
@@ -938,6 +959,27 @@ func (e HomeworkCreateRequestSchema1SubmissionStartAt1) Valid() bool {
 	}
 }
 
+// Defines values for HomeworkDetailResponseSchemaAuditLogsAction.
+const (
+	HomeworkDetailResponseSchemaAuditLogsActionCreated HomeworkDetailResponseSchemaAuditLogsAction = "created"
+	HomeworkDetailResponseSchemaAuditLogsActionDeleted HomeworkDetailResponseSchemaAuditLogsAction = "deleted"
+	HomeworkDetailResponseSchemaAuditLogsActionUpdated HomeworkDetailResponseSchemaAuditLogsAction = "updated"
+)
+
+// Valid indicates whether the value is a known member of the HomeworkDetailResponseSchemaAuditLogsAction enum.
+func (e HomeworkDetailResponseSchemaAuditLogsAction) Valid() bool {
+	switch e {
+	case HomeworkDetailResponseSchemaAuditLogsActionCreated:
+		return true
+	case HomeworkDetailResponseSchemaAuditLogsActionDeleted:
+		return true
+	case HomeworkDetailResponseSchemaAuditLogsActionUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HomeworkUpdateRequestSchemaPublishedAt1.
 const (
 	HomeworkUpdateRequestSchemaPublishedAt1LessThannil HomeworkUpdateRequestSchemaPublishedAt1 = "<nil>"
@@ -977,27 +1019,6 @@ const (
 func (e HomeworkUpdateRequestSchemaSubmissionStartAt1) Valid() bool {
 	switch e {
 	case HomeworkUpdateRequestSchemaSubmissionStartAt1LessThannil:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for HomeworksListResponseSchemaAuditLogsAction.
-const (
-	HomeworksListResponseSchemaAuditLogsActionCreated HomeworksListResponseSchemaAuditLogsAction = "created"
-	HomeworksListResponseSchemaAuditLogsActionDeleted HomeworksListResponseSchemaAuditLogsAction = "deleted"
-	HomeworksListResponseSchemaAuditLogsActionUpdated HomeworksListResponseSchemaAuditLogsAction = "updated"
-)
-
-// Valid indicates whether the value is a known member of the HomeworksListResponseSchemaAuditLogsAction enum.
-func (e HomeworksListResponseSchemaAuditLogsAction) Valid() bool {
-	switch e {
-	case HomeworksListResponseSchemaAuditLogsActionCreated:
-		return true
-	case HomeworksListResponseSchemaAuditLogsActionDeleted:
-		return true
-	case HomeworksListResponseSchemaAuditLogsActionUpdated:
 		return true
 	default:
 		return false
@@ -1123,16 +1144,16 @@ func (e TodoCompletionBatchResponseSchemaResults0TodoPriority) Valid() bool {
 
 // Defines values for TodoCompletionBatchResponseSchemaResults1ErrorCode.
 const (
-	Forbidden TodoCompletionBatchResponseSchemaResults1ErrorCode = "forbidden"
-	NotFound  TodoCompletionBatchResponseSchemaResults1ErrorCode = "not_found"
+	TodoCompletionBatchResponseSchemaResults1ErrorCodeForbidden TodoCompletionBatchResponseSchemaResults1ErrorCode = "forbidden"
+	TodoCompletionBatchResponseSchemaResults1ErrorCodeNotFound  TodoCompletionBatchResponseSchemaResults1ErrorCode = "not_found"
 )
 
 // Valid indicates whether the value is a known member of the TodoCompletionBatchResponseSchemaResults1ErrorCode enum.
 func (e TodoCompletionBatchResponseSchemaResults1ErrorCode) Valid() bool {
 	switch e {
-	case Forbidden:
+	case TodoCompletionBatchResponseSchemaResults1ErrorCodeForbidden:
 		return true
-	case NotFound:
+	case TodoCompletionBatchResponseSchemaResults1ErrorCodeNotFound:
 		return true
 	default:
 		return false
@@ -1889,29 +1910,31 @@ type UnderscoreUnderscoreSchema0 struct {
 		IsUstcVerified bool    `json:"isUstcVerified"`
 		Name           *string `json:"name"`
 	} `json:"author"`
-	AuthorHidden bool      `json:"authorHidden"`
-	Body         string    `json:"body"`
-	CanDelete    bool      `json:"canDelete"`
-	CanEdit      bool      `json:"canEdit"`
-	CanModerate  bool      `json:"canModerate"`
-	CanReact     bool      `json:"canReact"`
-	CanReply     bool      `json:"canReply"`
-	CreatedAt    time.Time `json:"createdAt"`
-	Id           string    `json:"id"`
-	IsAnonymous  bool      `json:"isAnonymous"`
-	IsAuthor     bool      `json:"isAuthor"`
-	ParentId     *string   `json:"parentId"`
-	Reactions    []struct {
+	AuthorHidden          bool      `json:"authorHidden"`
+	Body                  string    `json:"body"`
+	CanDelete             bool      `json:"canDelete"`
+	CanEdit               bool      `json:"canEdit"`
+	CanModerate           bool      `json:"canModerate"`
+	CanReact              bool      `json:"canReact"`
+	CanReply              bool      `json:"canReply"`
+	CreatedAt             time.Time `json:"createdAt"`
+	Id                    string    `json:"id"`
+	IsAncestryPlaceholder *bool     `json:"isAncestryPlaceholder,omitempty"`
+	IsAnonymous           bool      `json:"isAnonymous"`
+	IsAuthor              bool      `json:"isAuthor"`
+	ParentId              *string   `json:"parentId"`
+	Reactions             []struct {
 		Count            int    `json:"count"`
 		Type             string `json:"type"`
 		ViewerHasReacted bool   `json:"viewerHasReacted"`
 	} `json:"reactions"`
-	RenderedBody string                        `json:"renderedBody"`
-	Replies      []UnderscoreUnderscoreSchema0 `json:"replies"`
-	RootId       *string                       `json:"rootId"`
-	Status       string                        `json:"status"`
-	UpdatedAt    time.Time                     `json:"updatedAt"`
-	Visibility   string                        `json:"visibility"`
+	RenderedBody      string                        `json:"renderedBody"`
+	Replies           []UnderscoreUnderscoreSchema0 `json:"replies"`
+	RepliesNextCursor *string                       `json:"repliesNextCursor"`
+	RootId            *string                       `json:"rootId"`
+	Status            string                        `json:"status"`
+	UpdatedAt         time.Time                     `json:"updatedAt"`
+	Visibility        string                        `json:"visibility"`
 }
 
 // UnderscoreUnderscoreSchema1 defines model for __schema1.
@@ -1932,29 +1955,31 @@ type UnderscoreUnderscoreSchema1 struct {
 		IsUstcVerified bool    `json:"isUstcVerified"`
 		Name           *string `json:"name"`
 	} `json:"author"`
-	AuthorHidden bool      `json:"authorHidden"`
-	Body         string    `json:"body"`
-	CanDelete    bool      `json:"canDelete"`
-	CanEdit      bool      `json:"canEdit"`
-	CanModerate  bool      `json:"canModerate"`
-	CanReact     bool      `json:"canReact"`
-	CanReply     bool      `json:"canReply"`
-	CreatedAt    time.Time `json:"createdAt"`
-	Id           string    `json:"id"`
-	IsAnonymous  bool      `json:"isAnonymous"`
-	IsAuthor     bool      `json:"isAuthor"`
-	ParentId     *string   `json:"parentId"`
-	Reactions    []struct {
+	AuthorHidden          bool      `json:"authorHidden"`
+	Body                  string    `json:"body"`
+	CanDelete             bool      `json:"canDelete"`
+	CanEdit               bool      `json:"canEdit"`
+	CanModerate           bool      `json:"canModerate"`
+	CanReact              bool      `json:"canReact"`
+	CanReply              bool      `json:"canReply"`
+	CreatedAt             time.Time `json:"createdAt"`
+	Id                    string    `json:"id"`
+	IsAncestryPlaceholder *bool     `json:"isAncestryPlaceholder,omitempty"`
+	IsAnonymous           bool      `json:"isAnonymous"`
+	IsAuthor              bool      `json:"isAuthor"`
+	ParentId              *string   `json:"parentId"`
+	Reactions             []struct {
 		Count            int    `json:"count"`
 		Type             string `json:"type"`
 		ViewerHasReacted bool   `json:"viewerHasReacted"`
 	} `json:"reactions"`
-	RenderedBody string                        `json:"renderedBody"`
-	Replies      []UnderscoreUnderscoreSchema1 `json:"replies"`
-	RootId       *string                       `json:"rootId"`
-	Status       string                        `json:"status"`
-	UpdatedAt    time.Time                     `json:"updatedAt"`
-	Visibility   string                        `json:"visibility"`
+	RenderedBody      string                        `json:"renderedBody"`
+	Replies           []UnderscoreUnderscoreSchema1 `json:"replies"`
+	RepliesNextCursor *string                       `json:"repliesNextCursor"`
+	RootId            *string                       `json:"rootId"`
+	Status            string                        `json:"status"`
+	UpdatedAt         time.Time                     `json:"updatedAt"`
+	Visibility        string                        `json:"visibility"`
 }
 
 // AccountClientActivityResponseSchema defines model for accountClientActivityResponseSchema.
@@ -4205,6 +4230,23 @@ type CommentReactionRequestSchema struct {
 // CommentReactionRequestSchemaType defines model for CommentReactionRequestSchema.Type.
 type CommentReactionRequestSchemaType string
 
+// CommentRepliesResponseSchema defines model for commentRepliesResponseSchema.
+type CommentRepliesResponseSchema struct {
+	NextCursor *string                       `json:"nextCursor"`
+	RootId     string                        `json:"rootId"`
+	Thread     []UnderscoreUnderscoreSchema1 `json:"thread"`
+	Viewer     struct {
+		Image               *string    `json:"image"`
+		IsAdmin             bool       `json:"isAdmin"`
+		IsAuthenticated     bool       `json:"isAuthenticated"`
+		IsSuspended         bool       `json:"isSuspended"`
+		Name                *string    `json:"name"`
+		SuspensionExpiresAt *time.Time `json:"suspensionExpiresAt"`
+		SuspensionReason    *string    `json:"suspensionReason"`
+		UserId              *string    `json:"userId"`
+	} `json:"viewer"`
+}
+
 // CommentThreadResponseSchema defines model for commentThreadResponseSchema.
 type CommentThreadResponseSchema struct {
 	FocusId     string `json:"focusId"`
@@ -5115,6 +5157,28 @@ type DescriptionsResponseSchema struct {
 	} `json:"viewer"`
 }
 
+// HomeworkAuditListResponseSchema defines model for homeworkAuditListResponseSchema.
+type HomeworkAuditListResponseSchema struct {
+	AuditLogs []struct {
+		Action HomeworkAuditListResponseSchemaAuditLogsAction `json:"action"`
+		Actor  *struct {
+			Id       string  `json:"id"`
+			Image    *string `json:"image"`
+			Name     *string `json:"name"`
+			Username *string `json:"username"`
+		} `json:"actor"`
+		ActorId       *string   `json:"actorId"`
+		CreatedAt     time.Time `json:"createdAt"`
+		HomeworkId    *string   `json:"homeworkId"`
+		Id            string    `json:"id"`
+		SectionId     int       `json:"sectionId"`
+		TitleSnapshot *string   `json:"titleSnapshot"`
+	} `json:"auditLogs"`
+}
+
+// HomeworkAuditListResponseSchemaAuditLogsAction defines model for HomeworkAuditListResponseSchema.AuditLogs.Action.
+type HomeworkAuditListResponseSchemaAuditLogsAction string
+
 // HomeworkCompletionBatchRequestSchema defines model for homeworkCompletionBatchRequestSchema.
 type HomeworkCompletionBatchRequestSchema struct {
 	Items []struct {
@@ -5421,6 +5485,131 @@ type HomeworkCreateResponseSchema struct {
 	Id string `json:"id"`
 }
 
+// HomeworkDetailResponseSchema defines model for homeworkDetailResponseSchema.
+type HomeworkDetailResponseSchema struct {
+	AuditLogs []struct {
+		Action HomeworkDetailResponseSchemaAuditLogsAction `json:"action"`
+		Actor  *struct {
+			Id       string  `json:"id"`
+			Image    *string `json:"image"`
+			Name     *string `json:"name"`
+			Username *string `json:"username"`
+		} `json:"actor"`
+		ActorId       *string   `json:"actorId"`
+		CreatedAt     time.Time `json:"createdAt"`
+		HomeworkId    *string   `json:"homeworkId"`
+		Id            string    `json:"id"`
+		SectionId     int       `json:"sectionId"`
+		TitleSnapshot *string   `json:"titleSnapshot"`
+	} `json:"auditLogs"`
+	Homework struct {
+		CommentCount int `json:"commentCount"`
+		Completion   *struct {
+			CompletedAt time.Time `json:"completedAt"`
+		} `json:"completion"`
+		CreatedAt time.Time `json:"createdAt"`
+		CreatedBy *struct {
+			Id       string  `json:"id"`
+			Image    *string `json:"image"`
+			Name     *string `json:"name"`
+			Username *string `json:"username"`
+		} `json:"createdBy"`
+		CreatedById *string    `json:"createdById"`
+		DeletedAt   *time.Time `json:"deletedAt"`
+		DeletedBy   *struct {
+			Id       string  `json:"id"`
+			Image    *string `json:"image"`
+			Name     *string `json:"name"`
+			Username *string `json:"username"`
+		} `json:"deletedBy"`
+		DeletedById *string `json:"deletedById"`
+		Description *struct {
+			Content        string     `json:"content"`
+			CourseId       *int       `json:"courseId"`
+			CreatedAt      time.Time  `json:"createdAt"`
+			HomeworkId     *string    `json:"homeworkId"`
+			Id             string     `json:"id"`
+			LastEditedAt   *time.Time `json:"lastEditedAt"`
+			LastEditedById *string    `json:"lastEditedById"`
+			SectionId      *int       `json:"sectionId"`
+			TeacherId      *int       `json:"teacherId"`
+			UpdatedAt      time.Time  `json:"updatedAt"`
+		} `json:"description"`
+		Id           string     `json:"id"`
+		IsMajor      bool       `json:"isMajor"`
+		PublishedAt  *time.Time `json:"publishedAt"`
+		RequiresTeam bool       `json:"requiresTeam"`
+		Section      struct {
+			ActualPeriods *float32 `json:"actualPeriods"`
+			BizTypeId     *int     `json:"bizTypeId"`
+			CampusId      *int     `json:"campusId"`
+			Code          string   `json:"code"`
+			Course        struct {
+				CategoryId       *int    `json:"categoryId"`
+				ClassTypeId      *int    `json:"classTypeId"`
+				ClassifyId       *int    `json:"classifyId"`
+				Code             string  `json:"code"`
+				EducationLevelId *int    `json:"educationLevelId"`
+				GradationId      *int    `json:"gradationId"`
+				Id               int     `json:"id"`
+				JwId             int     `json:"jwId"`
+				NameCn           string  `json:"nameCn"`
+				NameEn           *string `json:"nameEn"`
+				NamePrimary      string  `json:"namePrimary"`
+				NameSecondary    *string `json:"nameSecondary"`
+				TypeId           *int    `json:"typeId"`
+			} `json:"course"`
+			CourseId                int             `json:"courseId"`
+			Credits                 *float32        `json:"credits"`
+			DateTimePlacePersonText interface{}     `json:"dateTimePlacePersonText"`
+			DateTimePlaceText       *string         `json:"dateTimePlaceText"`
+			DesignPeriods           *float32        `json:"designPeriods"`
+			ExamModeId              *int            `json:"examModeId"`
+			ExperimentPeriods       *float32        `json:"experimentPeriods"`
+			GraduateAndPostgraduate *bool           `json:"graduateAndPostgraduate"`
+			Id                      int             `json:"id"`
+			JwId                    int             `json:"jwId"`
+			LimitCount              *int            `json:"limitCount"`
+			MachinePeriods          *float32        `json:"machinePeriods"`
+			OpenDepartmentId        *int            `json:"openDepartmentId"`
+			Period                  *int            `json:"period"`
+			PeriodsPerWeek          *float32        `json:"periodsPerWeek"`
+			PracticePeriods         *float32        `json:"practicePeriods"`
+			Remark                  *string         `json:"remark"`
+			RetiredAt               *time.Time      `json:"retiredAt"`
+			RoomTypeId              *int            `json:"roomTypeId"`
+			ScheduleJsonParams      interface{}     `json:"scheduleJsonParams"`
+			ScheduleRemark          *string         `json:"scheduleRemark"`
+			ScheduleState           *string         `json:"scheduleState"`
+			SelectedStdCount        *int            `json:"selectedStdCount"`
+			Semester                *SemesterSchema `json:"semester"`
+			SemesterId              *int            `json:"semesterId"`
+			StdCount                *int            `json:"stdCount"`
+			SuggestScheduleWeekInfo *string         `json:"suggestScheduleWeekInfo"`
+			SuggestScheduleWeeks    interface{}     `json:"suggestScheduleWeeks"`
+			TeachLanguageId         *int            `json:"teachLanguageId"`
+			TestPeriods             *float32        `json:"testPeriods"`
+			TheoryPeriods           *float32        `json:"theoryPeriods"`
+			TimesPerWeek            *int            `json:"timesPerWeek"`
+		} `json:"section"`
+		SectionId         int        `json:"sectionId"`
+		SubmissionDueAt   *time.Time `json:"submissionDueAt"`
+		SubmissionStartAt *time.Time `json:"submissionStartAt"`
+		Title             string     `json:"title"`
+		UpdatedAt         time.Time  `json:"updatedAt"`
+		UpdatedBy         *struct {
+			Id       string  `json:"id"`
+			Image    *string `json:"image"`
+			Name     *string `json:"name"`
+			Username *string `json:"username"`
+		} `json:"updatedBy"`
+		UpdatedById *string `json:"updatedById"`
+	} `json:"homework"`
+}
+
+// HomeworkDetailResponseSchemaAuditLogsAction defines model for HomeworkDetailResponseSchema.AuditLogs.Action.
+type HomeworkDetailResponseSchemaAuditLogsAction string
+
 // HomeworkUpdateRequestSchema defines model for homeworkUpdateRequestSchema.
 type HomeworkUpdateRequestSchema struct {
 	Description       *string                                        `json:"description,omitempty"`
@@ -5575,123 +5764,25 @@ type HomeworkUpdateResponseSchema struct {
 
 // HomeworksListResponseSchema defines model for homeworksListResponseSchema.
 type HomeworksListResponseSchema struct {
-	AuditLogs []struct {
-		Action HomeworksListResponseSchemaAuditLogsAction `json:"action"`
-		Actor  *struct {
-			Id       string  `json:"id"`
-			Image    *string `json:"image"`
-			Name     *string `json:"name"`
-			Username *string `json:"username"`
-		} `json:"actor"`
-		ActorId       *string   `json:"actorId"`
-		CreatedAt     time.Time `json:"createdAt"`
-		HomeworkId    *string   `json:"homeworkId"`
-		Id            string    `json:"id"`
-		SectionId     int       `json:"sectionId"`
-		TitleSnapshot *string   `json:"titleSnapshot"`
-	} `json:"auditLogs"`
 	Data []struct {
 		CommentCount int `json:"commentCount"`
 		Completion   *struct {
 			CompletedAt time.Time `json:"completedAt"`
 		} `json:"completion"`
-		CreatedAt time.Time `json:"createdAt"`
-		CreatedBy *struct {
-			Id       string  `json:"id"`
-			Image    *string `json:"image"`
-			Name     *string `json:"name"`
-			Username *string `json:"username"`
-		} `json:"createdBy"`
-		CreatedById *string    `json:"createdById"`
-		DeletedAt   *time.Time `json:"deletedAt"`
-		DeletedBy   *struct {
-			Id       string  `json:"id"`
-			Image    *string `json:"image"`
-			Name     *string `json:"name"`
-			Username *string `json:"username"`
-		} `json:"deletedBy"`
-		DeletedById *string `json:"deletedById"`
-		Description *struct {
-			Content        string     `json:"content"`
-			CourseId       *int       `json:"courseId"`
-			CreatedAt      time.Time  `json:"createdAt"`
-			HomeworkId     *string    `json:"homeworkId"`
-			Id             string     `json:"id"`
-			LastEditedAt   *time.Time `json:"lastEditedAt"`
-			LastEditedById *string    `json:"lastEditedById"`
-			SectionId      *int       `json:"sectionId"`
-			TeacherId      *int       `json:"teacherId"`
-			UpdatedAt      time.Time  `json:"updatedAt"`
-		} `json:"description"`
-		Id           string     `json:"id"`
-		IsMajor      bool       `json:"isMajor"`
-		PublishedAt  *time.Time `json:"publishedAt"`
-		RequiresTeam bool       `json:"requiresTeam"`
-		Section      struct {
-			ActualPeriods *float32 `json:"actualPeriods"`
-			BizTypeId     *int     `json:"bizTypeId"`
-			CampusId      *int     `json:"campusId"`
-			Code          string   `json:"code"`
-			Course        struct {
-				CategoryId       *int    `json:"categoryId"`
-				ClassTypeId      *int    `json:"classTypeId"`
-				ClassifyId       *int    `json:"classifyId"`
-				Code             string  `json:"code"`
-				EducationLevelId *int    `json:"educationLevelId"`
-				GradationId      *int    `json:"gradationId"`
-				Id               int     `json:"id"`
-				JwId             int     `json:"jwId"`
-				NameCn           string  `json:"nameCn"`
-				NameEn           *string `json:"nameEn"`
-				NamePrimary      string  `json:"namePrimary"`
-				NameSecondary    *string `json:"nameSecondary"`
-				TypeId           *int    `json:"typeId"`
-			} `json:"course"`
-			CourseId                int             `json:"courseId"`
-			Credits                 *float32        `json:"credits"`
-			DateTimePlacePersonText interface{}     `json:"dateTimePlacePersonText"`
-			DateTimePlaceText       *string         `json:"dateTimePlaceText"`
-			DesignPeriods           *float32        `json:"designPeriods"`
-			ExamModeId              *int            `json:"examModeId"`
-			ExperimentPeriods       *float32        `json:"experimentPeriods"`
-			GraduateAndPostgraduate *bool           `json:"graduateAndPostgraduate"`
-			Id                      int             `json:"id"`
-			JwId                    int             `json:"jwId"`
-			LimitCount              *int            `json:"limitCount"`
-			MachinePeriods          *float32        `json:"machinePeriods"`
-			OpenDepartmentId        *int            `json:"openDepartmentId"`
-			Period                  *int            `json:"period"`
-			PeriodsPerWeek          *float32        `json:"periodsPerWeek"`
-			PracticePeriods         *float32        `json:"practicePeriods"`
-			Remark                  *string         `json:"remark"`
-			RetiredAt               *time.Time      `json:"retiredAt"`
-			RoomTypeId              *int            `json:"roomTypeId"`
-			ScheduleJsonParams      interface{}     `json:"scheduleJsonParams"`
-			ScheduleRemark          *string         `json:"scheduleRemark"`
-			ScheduleState           *string         `json:"scheduleState"`
-			SelectedStdCount        *int            `json:"selectedStdCount"`
-			Semester                *SemesterSchema `json:"semester"`
-			SemesterId              *int            `json:"semesterId"`
-			StdCount                *int            `json:"stdCount"`
-			SuggestScheduleWeekInfo *string         `json:"suggestScheduleWeekInfo"`
-			SuggestScheduleWeeks    interface{}     `json:"suggestScheduleWeeks"`
-			TeachLanguageId         *int            `json:"teachLanguageId"`
-			TestPeriods             *float32        `json:"testPeriods"`
-			TheoryPeriods           *float32        `json:"theoryPeriods"`
-			TimesPerWeek            *int            `json:"timesPerWeek"`
-		} `json:"section"`
+		CreatedAt         time.Time  `json:"createdAt"`
+		CreatedById       *string    `json:"createdById"`
+		DeletedAt         *time.Time `json:"deletedAt"`
+		DeletedById       *string    `json:"deletedById"`
+		Id                string     `json:"id"`
+		IsMajor           bool       `json:"isMajor"`
+		PublishedAt       *time.Time `json:"publishedAt"`
+		RequiresTeam      bool       `json:"requiresTeam"`
 		SectionId         int        `json:"sectionId"`
 		SubmissionDueAt   *time.Time `json:"submissionDueAt"`
 		SubmissionStartAt *time.Time `json:"submissionStartAt"`
 		Title             string     `json:"title"`
 		UpdatedAt         time.Time  `json:"updatedAt"`
-		UpdatedBy         *struct {
-			Id       string  `json:"id"`
-			Image    *string `json:"image"`
-			Name     *string `json:"name"`
-			Username *string `json:"username"`
-		} `json:"updatedBy"`
-		UpdatedById *string `json:"updatedById"`
+		UpdatedById       *string    `json:"updatedById"`
 	} `json:"data"`
 	Pagination struct {
 		Page       int `json:"page"`
@@ -5710,9 +5801,6 @@ type HomeworksListResponseSchema struct {
 		UserId              *string    `json:"userId"`
 	} `json:"viewer"`
 }
-
-// HomeworksListResponseSchemaAuditLogsAction defines model for HomeworksListResponseSchema.AuditLogs.Action.
-type HomeworksListResponseSchemaAuditLogsAction string
 
 // IdResponseSchema defines model for idResponseSchema.
 type IdResponseSchema struct {
@@ -7715,6 +7803,14 @@ type RemoveCommentReactionParams struct {
 // RemoveCommentReactionParamsType defines parameters for RemoveCommentReaction.
 type RemoveCommentReactionParamsType string
 
+// GetApiCommunityCommentsIdRepliesParams defines parameters for GetApiCommunityCommentsIdReplies.
+type GetApiCommunityCommentsIdRepliesParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// PageSize Number of items per page.
+	PageSize *int64 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
 // GetDescriptionParams defines parameters for GetDescription.
 type GetDescriptionParams struct {
 	TargetType  GetDescriptionParamsTargetType `form:"targetType" json:"targetType"`
@@ -7742,6 +7838,13 @@ type CommunitySectionHomeworkListParams struct {
 
 // CommunitySectionHomeworkListParamsIncludeDeleted defines parameters for CommunitySectionHomeworkList.
 type CommunitySectionHomeworkListParamsIncludeDeleted string
+
+// GetApiCommunitySectionHomeworksAuditParams defines parameters for GetApiCommunitySectionHomeworksAudit.
+type GetApiCommunitySectionHomeworksAuditParams struct {
+	SectionId   *int64  `form:"sectionId,omitempty" json:"sectionId,omitempty"`
+	SectionIds  *string `form:"sectionIds,omitempty" json:"sectionIds,omitempty"`
+	SectionJwId *int64  `form:"sectionJwId,omitempty" json:"sectionJwId,omitempty"`
+}
 
 // GetSubscribedHomeworksParams defines parameters for GetSubscribedHomeworks.
 type GetSubscribedHomeworksParams struct {
@@ -10880,6 +10983,9 @@ type ClientInterface interface {
 
 	AddCommentReaction(ctx context.Context, id string, body AddCommentReactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetApiCommunityCommentsIdReplies request
+	GetApiCommunityCommentsIdReplies(ctx context.Context, id string, params *GetApiCommunityCommentsIdRepliesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetDescription request
 	GetDescription(ctx context.Context, params *GetDescriptionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -10896,8 +11002,14 @@ type ClientInterface interface {
 
 	CommunitySectionHomeworkCreate(ctx context.Context, body CommunitySectionHomeworkCreateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetApiCommunitySectionHomeworksAudit request
+	GetApiCommunitySectionHomeworksAudit(ctx context.Context, params *GetApiCommunitySectionHomeworksAuditParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CommunitySectionHomeworkDelete request
 	CommunitySectionHomeworkDelete(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiCommunitySectionHomeworksId request
+	GetApiCommunitySectionHomeworksId(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CommunitySectionHomeworkUpdateWithBody request with any body
 	CommunitySectionHomeworkUpdateWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11673,6 +11785,18 @@ func (c *Client) AddCommentReaction(ctx context.Context, id string, body AddComm
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetApiCommunityCommentsIdReplies(ctx context.Context, id string, params *GetApiCommunityCommentsIdRepliesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiCommunityCommentsIdRepliesRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetDescription(ctx context.Context, params *GetDescriptionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDescriptionRequest(c.Server, params)
 	if err != nil {
@@ -11745,8 +11869,32 @@ func (c *Client) CommunitySectionHomeworkCreate(ctx context.Context, body Commun
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetApiCommunitySectionHomeworksAudit(ctx context.Context, params *GetApiCommunitySectionHomeworksAuditParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiCommunitySectionHomeworksAuditRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) CommunitySectionHomeworkDelete(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCommunitySectionHomeworkDeleteRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiCommunitySectionHomeworksId(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiCommunitySectionHomeworksIdRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -15579,6 +15727,78 @@ func NewAddCommentReactionRequestWithBody(server string, id string, contentType 
 	return req, nil
 }
 
+// NewGetApiCommunityCommentsIdRepliesRequest generates requests for GetApiCommunityCommentsIdReplies
+func NewGetApiCommunityCommentsIdRepliesRequest(server string, id string, params *GetApiCommunityCommentsIdRepliesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/community/comments/%s/replies", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetDescriptionRequest generates requests for GetDescription
 func NewGetDescriptionRequest(server string, params *GetDescriptionParams) (*http.Request, error) {
 	var err error
@@ -15913,6 +16133,87 @@ func NewCommunitySectionHomeworkCreateRequestWithBody(server string, contentType
 	return req, nil
 }
 
+// NewGetApiCommunitySectionHomeworksAuditRequest generates requests for GetApiCommunitySectionHomeworksAudit
+func NewGetApiCommunitySectionHomeworksAuditRequest(server string, params *GetApiCommunitySectionHomeworksAuditParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/community/section-homeworks/audit")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.SectionId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sectionId", *params.SectionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SectionIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sectionIds", *params.SectionIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SectionJwId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sectionJwId", *params.SectionJwId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewCommunitySectionHomeworkDeleteRequest generates requests for CommunitySectionHomeworkDelete
 func NewCommunitySectionHomeworkDeleteRequest(server string, id string) (*http.Request, error) {
 	var err error
@@ -15940,6 +16241,40 @@ func NewCommunitySectionHomeworkDeleteRequest(server string, id string) (*http.R
 	}
 
 	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetApiCommunitySectionHomeworksIdRequest generates requests for GetApiCommunitySectionHomeworksId
+func NewGetApiCommunitySectionHomeworksIdRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/community/section-homeworks/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -17687,6 +18022,9 @@ type ClientWithResponsesInterface interface {
 
 	AddCommentReactionWithResponse(ctx context.Context, id string, body AddCommentReactionJSONRequestBody, reqEditors ...RequestEditorFn) (*AddCommentReactionResponse, error)
 
+	// GetApiCommunityCommentsIdRepliesWithResponse request
+	GetApiCommunityCommentsIdRepliesWithResponse(ctx context.Context, id string, params *GetApiCommunityCommentsIdRepliesParams, reqEditors ...RequestEditorFn) (*GetApiCommunityCommentsIdRepliesResponse, error)
+
 	// GetDescriptionWithResponse request
 	GetDescriptionWithResponse(ctx context.Context, params *GetDescriptionParams, reqEditors ...RequestEditorFn) (*GetDescriptionResponse, error)
 
@@ -17703,8 +18041,14 @@ type ClientWithResponsesInterface interface {
 
 	CommunitySectionHomeworkCreateWithResponse(ctx context.Context, body CommunitySectionHomeworkCreateJSONRequestBody, reqEditors ...RequestEditorFn) (*CommunitySectionHomeworkCreateResponse, error)
 
+	// GetApiCommunitySectionHomeworksAuditWithResponse request
+	GetApiCommunitySectionHomeworksAuditWithResponse(ctx context.Context, params *GetApiCommunitySectionHomeworksAuditParams, reqEditors ...RequestEditorFn) (*GetApiCommunitySectionHomeworksAuditResponse, error)
+
 	// CommunitySectionHomeworkDeleteWithResponse request
 	CommunitySectionHomeworkDeleteWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*CommunitySectionHomeworkDeleteResponse, error)
+
+	// GetApiCommunitySectionHomeworksIdWithResponse request
+	GetApiCommunitySectionHomeworksIdWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetApiCommunitySectionHomeworksIdResponse, error)
 
 	// CommunitySectionHomeworkUpdateWithBodyWithResponse request with any body
 	CommunitySectionHomeworkUpdateWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CommunitySectionHomeworkUpdateResponse, error)
@@ -18900,6 +19244,31 @@ func (r AddCommentReactionResponse) StatusCode() int {
 	return 0
 }
 
+type GetApiCommunityCommentsIdRepliesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *CommentRepliesResponseSchema
+	JSON400      *OpenApiErrorSchema
+	JSON403      *OpenApiErrorSchema
+	JSON404      *OpenApiErrorSchema
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiCommunityCommentsIdRepliesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiCommunityCommentsIdRepliesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetDescriptionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -19004,6 +19373,30 @@ func (r CommunitySectionHomeworkCreateResponse) StatusCode() int {
 	return 0
 }
 
+type GetApiCommunitySectionHomeworksAuditResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *HomeworkAuditListResponseSchema
+	JSON400      *OpenApiErrorSchema
+	JSON404      *OpenApiErrorSchema
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiCommunitySectionHomeworksAuditResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiCommunitySectionHomeworksAuditResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type CommunitySectionHomeworkDeleteResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -19025,6 +19418,30 @@ func (r CommunitySectionHomeworkDeleteResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r CommunitySectionHomeworkDeleteResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetApiCommunitySectionHomeworksIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *HomeworkDetailResponseSchema
+	JSON400      *OpenApiErrorSchema
+	JSON404      *OpenApiErrorSchema
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiCommunitySectionHomeworksIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiCommunitySectionHomeworksIdResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -20347,6 +20764,15 @@ func (c *ClientWithResponses) AddCommentReactionWithResponse(ctx context.Context
 	return ParseAddCommentReactionResponse(rsp)
 }
 
+// GetApiCommunityCommentsIdRepliesWithResponse request returning *GetApiCommunityCommentsIdRepliesResponse
+func (c *ClientWithResponses) GetApiCommunityCommentsIdRepliesWithResponse(ctx context.Context, id string, params *GetApiCommunityCommentsIdRepliesParams, reqEditors ...RequestEditorFn) (*GetApiCommunityCommentsIdRepliesResponse, error) {
+	rsp, err := c.GetApiCommunityCommentsIdReplies(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiCommunityCommentsIdRepliesResponse(rsp)
+}
+
 // GetDescriptionWithResponse request returning *GetDescriptionResponse
 func (c *ClientWithResponses) GetDescriptionWithResponse(ctx context.Context, params *GetDescriptionParams, reqEditors ...RequestEditorFn) (*GetDescriptionResponse, error) {
 	rsp, err := c.GetDescription(ctx, params, reqEditors...)
@@ -20399,6 +20825,15 @@ func (c *ClientWithResponses) CommunitySectionHomeworkCreateWithResponse(ctx con
 	return ParseCommunitySectionHomeworkCreateResponse(rsp)
 }
 
+// GetApiCommunitySectionHomeworksAuditWithResponse request returning *GetApiCommunitySectionHomeworksAuditResponse
+func (c *ClientWithResponses) GetApiCommunitySectionHomeworksAuditWithResponse(ctx context.Context, params *GetApiCommunitySectionHomeworksAuditParams, reqEditors ...RequestEditorFn) (*GetApiCommunitySectionHomeworksAuditResponse, error) {
+	rsp, err := c.GetApiCommunitySectionHomeworksAudit(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiCommunitySectionHomeworksAuditResponse(rsp)
+}
+
 // CommunitySectionHomeworkDeleteWithResponse request returning *CommunitySectionHomeworkDeleteResponse
 func (c *ClientWithResponses) CommunitySectionHomeworkDeleteWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*CommunitySectionHomeworkDeleteResponse, error) {
 	rsp, err := c.CommunitySectionHomeworkDelete(ctx, id, reqEditors...)
@@ -20406,6 +20841,15 @@ func (c *ClientWithResponses) CommunitySectionHomeworkDeleteWithResponse(ctx con
 		return nil, err
 	}
 	return ParseCommunitySectionHomeworkDeleteResponse(rsp)
+}
+
+// GetApiCommunitySectionHomeworksIdWithResponse request returning *GetApiCommunitySectionHomeworksIdResponse
+func (c *ClientWithResponses) GetApiCommunitySectionHomeworksIdWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetApiCommunitySectionHomeworksIdResponse, error) {
+	rsp, err := c.GetApiCommunitySectionHomeworksId(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiCommunitySectionHomeworksIdResponse(rsp)
 }
 
 // CommunitySectionHomeworkUpdateWithBodyWithResponse request with arbitrary body returning *CommunitySectionHomeworkUpdateResponse
@@ -22742,6 +23186,53 @@ func ParseAddCommentReactionResponse(rsp *http.Response) (*AddCommentReactionRes
 	return response, nil
 }
 
+// ParseGetApiCommunityCommentsIdRepliesResponse parses an HTTP response from a GetApiCommunityCommentsIdRepliesWithResponse call
+func ParseGetApiCommunityCommentsIdRepliesResponse(rsp *http.Response) (*GetApiCommunityCommentsIdRepliesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiCommunityCommentsIdRepliesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CommentRepliesResponseSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetDescriptionResponse parses an HTTP response from a GetDescriptionWithResponse call
 func ParseGetDescriptionResponse(rsp *http.Response) (*GetDescriptionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -22958,6 +23449,46 @@ func ParseCommunitySectionHomeworkCreateResponse(rsp *http.Response) (*Community
 	return response, nil
 }
 
+// ParseGetApiCommunitySectionHomeworksAuditResponse parses an HTTP response from a GetApiCommunitySectionHomeworksAuditWithResponse call
+func ParseGetApiCommunitySectionHomeworksAuditResponse(rsp *http.Response) (*GetApiCommunitySectionHomeworksAuditResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiCommunitySectionHomeworksAuditResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest HomeworkAuditListResponseSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseCommunitySectionHomeworkDeleteResponse parses an HTTP response from a CommunitySectionHomeworkDeleteWithResponse call
 func ParseCommunitySectionHomeworkDeleteResponse(rsp *http.Response) (*CommunitySectionHomeworkDeleteResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -23013,6 +23544,46 @@ func ParseCommunitySectionHomeworkDeleteResponse(rsp *http.Response) (*Community
 			return nil, err
 		}
 		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetApiCommunitySectionHomeworksIdResponse parses an HTTP response from a GetApiCommunitySectionHomeworksIdWithResponse call
+func ParseGetApiCommunitySectionHomeworksIdResponse(rsp *http.Response) (*GetApiCommunitySectionHomeworksIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiCommunitySectionHomeworksIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest HomeworkDetailResponseSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 
