@@ -238,19 +238,8 @@ func refreshTokenRequest(ctx context.Context, client *http.Client, endpoint, cli
 }
 
 func tokenExpiresInFromRaw(raw map[string]any) int {
-	switch v := raw["expires_in"].(type) {
-	case int:
-		return v
-	case int64:
-		return int(v)
-	case float64:
-		if v > 0 {
-			return int(v)
-		}
-	case string:
-		if n, err := parseIntString(v); err == nil && n > 0 {
-			return int(n)
-		}
+	if seconds, ok := oauthExpiresInSeconds(raw["expires_in"]); ok {
+		return seconds
 	}
 	return 0
 }
