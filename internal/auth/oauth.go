@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,12 +46,32 @@ func tokenExtraString(tok *oauth2.Token, key string) string {
 	return ""
 }
 
-func parseIntString(s string) (int64, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, errors.New("empty")
+func oauthExpiresInSeconds(value any) (int, bool) {
+	var seconds int64
+	switch v := value.(type) {
+	case int:
+		seconds = int64(v)
+	case int64:
+		seconds = v
+	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) || v != math.Trunc(v) || v > float64(math.MaxInt) {
+			return 0, false
+		}
+		seconds = int64(v)
+	case string:
+		parsed, err := strconv.ParseInt(strings.TrimSpace(v), 10, strconv.IntSize)
+		if err != nil {
+			return 0, false
+		}
+		seconds = parsed
+	default:
+		return 0, false
 	}
-	return strconv.ParseInt(s, 10, 64)
+
+	if seconds <= 0 || seconds > math.MaxInt || seconds > math.MaxInt64/int64(time.Second) {
+		return 0, false
+	}
+	return int(seconds), true
 }
 
 func effectiveTokenScope(token *oauthToken, fallback string) string {
@@ -104,19 +125,8 @@ func tokenExpiresIn(tok *oauth2.Token, fallback int) int {
 		return fallback
 	}
 	if extra := tok.Extra("expires_in"); extra != nil {
-		switch v := extra.(type) {
-		case int:
-			return v
-		case int64:
-			return int(v)
-		case float64:
-			if v > 0 {
-				return int(v)
-			}
-		case string:
-			if n, err := parseIntString(v); err == nil && n > 0 {
-				return int(n)
-			}
+		if seconds, ok := oauthExpiresInSeconds(extra); ok {
+			return seconds
 		}
 	}
 	if !tok.Expiry.IsZero() {

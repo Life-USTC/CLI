@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -368,6 +369,43 @@ func TestEffectiveTokenScopePrefersGrantedScope(t *testing.T) {
 	token := &oauthToken{Scope: "profile workspace.todo:read"}
 	if got := effectiveTokenScope(token, "openid profile workspace.todo:read"); got != "profile workspace.todo:read" {
 		t.Fatalf("effective scope = %q", got)
+	}
+}
+
+func TestOAuthExpiresInSecondsRejectsUnsafeValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		value any
+		want  int
+		ok    bool
+	}{
+		{name: "int", value: 3600, want: 3600, ok: true},
+		{name: "int64", value: int64(3600), want: 3600, ok: true},
+		{name: "float", value: float64(3600), want: 3600, ok: true},
+		{name: "string", value: " 3600 ", want: 3600, ok: true},
+		{name: "zero", value: 0},
+		{name: "negative", value: int64(-1)},
+		{name: "fractional", value: 1.5},
+		{name: "duration overflow", value: int64(math.MaxInt64/int64(time.Second) + 1)},
+		{name: "integer overflow string", value: "9223372036854775808"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := oauthExpiresInSeconds(tt.value)
+			if got != tt.want || ok != tt.ok {
+				t.Fatalf("oauthExpiresInSeconds(%v) = (%d, %t), want (%d, %t)", tt.value, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+}
+
+func TestTokenExpiresInUsesFallbackForUnsafeExtra(t *testing.T) {
+	token := (&oauth2.Token{}).WithExtra(map[string]any{
+		"expires_in": "9223372036854775808",
+	})
+	if got := tokenExpiresIn(token, 900); got != 900 {
+		t.Fatalf("tokenExpiresIn() = %d, want fallback 900", got)
 	}
 }
 
