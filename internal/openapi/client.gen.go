@@ -223,16 +223,19 @@ func (e AdminUpdateUserRequestSchemaUsername1) Valid() bool {
 
 // Defines values for BusNextDeparturesResponseSchemaDayType.
 const (
-	BusNextDeparturesResponseSchemaDayTypeWeekday BusNextDeparturesResponseSchemaDayType = "weekday"
-	BusNextDeparturesResponseSchemaDayTypeWeekend BusNextDeparturesResponseSchemaDayType = "weekend"
+	BusNextDeparturesResponseSchemaDayTypeSaturday BusNextDeparturesResponseSchemaDayType = "saturday"
+	BusNextDeparturesResponseSchemaDayTypeSunday   BusNextDeparturesResponseSchemaDayType = "sunday"
+	BusNextDeparturesResponseSchemaDayTypeWeekday  BusNextDeparturesResponseSchemaDayType = "weekday"
 )
 
 // Valid indicates whether the value is a known member of the BusNextDeparturesResponseSchemaDayType enum.
 func (e BusNextDeparturesResponseSchemaDayType) Valid() bool {
 	switch e {
-	case BusNextDeparturesResponseSchemaDayTypeWeekday:
+	case BusNextDeparturesResponseSchemaDayTypeSaturday:
 		return true
-	case BusNextDeparturesResponseSchemaDayTypeWeekend:
+	case BusNextDeparturesResponseSchemaDayTypeSunday:
+		return true
+	case BusNextDeparturesResponseSchemaDayTypeWeekday:
 		return true
 	default:
 		return false
@@ -241,16 +244,19 @@ func (e BusNextDeparturesResponseSchemaDayType) Valid() bool {
 
 // Defines values for BusNextDeparturesResponseSchemaDeparturesDayType.
 const (
-	BusNextDeparturesResponseSchemaDeparturesDayTypeWeekday BusNextDeparturesResponseSchemaDeparturesDayType = "weekday"
-	BusNextDeparturesResponseSchemaDeparturesDayTypeWeekend BusNextDeparturesResponseSchemaDeparturesDayType = "weekend"
+	BusNextDeparturesResponseSchemaDeparturesDayTypeSaturday BusNextDeparturesResponseSchemaDeparturesDayType = "saturday"
+	BusNextDeparturesResponseSchemaDeparturesDayTypeSunday   BusNextDeparturesResponseSchemaDeparturesDayType = "sunday"
+	BusNextDeparturesResponseSchemaDeparturesDayTypeWeekday  BusNextDeparturesResponseSchemaDeparturesDayType = "weekday"
 )
 
 // Valid indicates whether the value is a known member of the BusNextDeparturesResponseSchemaDeparturesDayType enum.
 func (e BusNextDeparturesResponseSchemaDeparturesDayType) Valid() bool {
 	switch e {
-	case BusNextDeparturesResponseSchemaDeparturesDayTypeWeekday:
+	case BusNextDeparturesResponseSchemaDeparturesDayTypeSaturday:
 		return true
-	case BusNextDeparturesResponseSchemaDeparturesDayTypeWeekend:
+	case BusNextDeparturesResponseSchemaDeparturesDayTypeSunday:
+		return true
+	case BusNextDeparturesResponseSchemaDeparturesDayTypeWeekday:
 		return true
 	default:
 		return false
@@ -277,16 +283,19 @@ func (e BusNextDeparturesResponseSchemaDeparturesStatus) Valid() bool {
 
 // Defines values for BusNextDeparturesResponseSchemaNextAvailableDepartureDayType.
 const (
-	BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeWeekday BusNextDeparturesResponseSchemaNextAvailableDepartureDayType = "weekday"
-	BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeWeekend BusNextDeparturesResponseSchemaNextAvailableDepartureDayType = "weekend"
+	BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeSaturday BusNextDeparturesResponseSchemaNextAvailableDepartureDayType = "saturday"
+	BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeSunday   BusNextDeparturesResponseSchemaNextAvailableDepartureDayType = "sunday"
+	BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeWeekday  BusNextDeparturesResponseSchemaNextAvailableDepartureDayType = "weekday"
 )
 
 // Valid indicates whether the value is a known member of the BusNextDeparturesResponseSchemaNextAvailableDepartureDayType enum.
 func (e BusNextDeparturesResponseSchemaNextAvailableDepartureDayType) Valid() bool {
 	switch e {
-	case BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeWeekday:
+	case BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeSaturday:
 		return true
-	case BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeWeekend:
+	case BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeSunday:
+		return true
+	case BusNextDeparturesResponseSchemaNextAvailableDepartureDayTypeWeekday:
 		return true
 	default:
 		return false
@@ -331,16 +340,19 @@ func (e BusQueryResponseSchemaLocale) Valid() bool {
 
 // Defines values for BusQueryResponseSchemaTripsDayType.
 const (
-	BusQueryResponseSchemaTripsDayTypeWeekday BusQueryResponseSchemaTripsDayType = "weekday"
-	BusQueryResponseSchemaTripsDayTypeWeekend BusQueryResponseSchemaTripsDayType = "weekend"
+	BusQueryResponseSchemaTripsDayTypeSaturday BusQueryResponseSchemaTripsDayType = "saturday"
+	BusQueryResponseSchemaTripsDayTypeSunday   BusQueryResponseSchemaTripsDayType = "sunday"
+	BusQueryResponseSchemaTripsDayTypeWeekday  BusQueryResponseSchemaTripsDayType = "weekday"
 )
 
 // Valid indicates whether the value is a known member of the BusQueryResponseSchemaTripsDayType enum.
 func (e BusQueryResponseSchemaTripsDayType) Valid() bool {
 	switch e {
-	case BusQueryResponseSchemaTripsDayTypeWeekday:
+	case BusQueryResponseSchemaTripsDayTypeSaturday:
 		return true
-	case BusQueryResponseSchemaTripsDayTypeWeekend:
+	case BusQueryResponseSchemaTripsDayTypeSunday:
+		return true
+	case BusQueryResponseSchemaTripsDayTypeWeekday:
 		return true
 	default:
 		return false
@@ -1058,6 +1070,393 @@ func (e OauthTokenResponseSchemaTokenType) Valid() bool {
 	}
 }
 
+// Defines values for PublicPublicationDetailSchemaPublicationType.
+const (
+	PublicPublicationDetailSchemaPublicationTypeNews   PublicPublicationDetailSchemaPublicationType = "news"
+	PublicPublicationDetailSchemaPublicationTypeNotice PublicPublicationDetailSchemaPublicationType = "notice"
+)
+
+// Valid indicates whether the value is a known member of the PublicPublicationDetailSchemaPublicationType enum.
+func (e PublicPublicationDetailSchemaPublicationType) Valid() bool {
+	switch e {
+	case PublicPublicationDetailSchemaPublicationTypeNews:
+		return true
+	case PublicPublicationDetailSchemaPublicationTypeNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicPublicationDetailSchemaRevisionObjectsKind.
+const (
+	PublicPublicationDetailSchemaRevisionObjectsKindAsset        PublicPublicationDetailSchemaRevisionObjectsKind = "asset"
+	PublicPublicationDetailSchemaRevisionObjectsKindBodyHtml     PublicPublicationDetailSchemaRevisionObjectsKind = "body_html"
+	PublicPublicationDetailSchemaRevisionObjectsKindBodyMarkdown PublicPublicationDetailSchemaRevisionObjectsKind = "body_markdown"
+	PublicPublicationDetailSchemaRevisionObjectsKindMedia        PublicPublicationDetailSchemaRevisionObjectsKind = "media"
+	PublicPublicationDetailSchemaRevisionObjectsKindRawPage      PublicPublicationDetailSchemaRevisionObjectsKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicPublicationDetailSchemaRevisionObjectsKind enum.
+func (e PublicPublicationDetailSchemaRevisionObjectsKind) Valid() bool {
+	switch e {
+	case PublicPublicationDetailSchemaRevisionObjectsKindAsset:
+		return true
+	case PublicPublicationDetailSchemaRevisionObjectsKindBodyHtml:
+		return true
+	case PublicPublicationDetailSchemaRevisionObjectsKindBodyMarkdown:
+		return true
+	case PublicPublicationDetailSchemaRevisionObjectsKindMedia:
+		return true
+	case PublicPublicationDetailSchemaRevisionObjectsKindRawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicPublicationDetailSchemaRevisionObjectsStatus.
+const (
+	PublicPublicationDetailSchemaRevisionObjectsStatusLinked   PublicPublicationDetailSchemaRevisionObjectsStatus = "linked"
+	PublicPublicationDetailSchemaRevisionObjectsStatusVerified PublicPublicationDetailSchemaRevisionObjectsStatus = "verified"
+)
+
+// Valid indicates whether the value is a known member of the PublicPublicationDetailSchemaRevisionObjectsStatus enum.
+func (e PublicPublicationDetailSchemaRevisionObjectsStatus) Valid() bool {
+	switch e {
+	case PublicPublicationDetailSchemaRevisionObjectsStatusLinked:
+		return true
+	case PublicPublicationDetailSchemaRevisionObjectsStatusVerified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicPublicationsResponseSchemaDataObjectsKind.
+const (
+	PublicPublicationsResponseSchemaDataObjectsKindAsset        PublicPublicationsResponseSchemaDataObjectsKind = "asset"
+	PublicPublicationsResponseSchemaDataObjectsKindBodyHtml     PublicPublicationsResponseSchemaDataObjectsKind = "body_html"
+	PublicPublicationsResponseSchemaDataObjectsKindBodyMarkdown PublicPublicationsResponseSchemaDataObjectsKind = "body_markdown"
+	PublicPublicationsResponseSchemaDataObjectsKindMedia        PublicPublicationsResponseSchemaDataObjectsKind = "media"
+	PublicPublicationsResponseSchemaDataObjectsKindRawPage      PublicPublicationsResponseSchemaDataObjectsKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicPublicationsResponseSchemaDataObjectsKind enum.
+func (e PublicPublicationsResponseSchemaDataObjectsKind) Valid() bool {
+	switch e {
+	case PublicPublicationsResponseSchemaDataObjectsKindAsset:
+		return true
+	case PublicPublicationsResponseSchemaDataObjectsKindBodyHtml:
+		return true
+	case PublicPublicationsResponseSchemaDataObjectsKindBodyMarkdown:
+		return true
+	case PublicPublicationsResponseSchemaDataObjectsKindMedia:
+		return true
+	case PublicPublicationsResponseSchemaDataObjectsKindRawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicPublicationsResponseSchemaDataObjectsStatus.
+const (
+	PublicPublicationsResponseSchemaDataObjectsStatusLinked   PublicPublicationsResponseSchemaDataObjectsStatus = "linked"
+	PublicPublicationsResponseSchemaDataObjectsStatusVerified PublicPublicationsResponseSchemaDataObjectsStatus = "verified"
+)
+
+// Valid indicates whether the value is a known member of the PublicPublicationsResponseSchemaDataObjectsStatus enum.
+func (e PublicPublicationsResponseSchemaDataObjectsStatus) Valid() bool {
+	switch e {
+	case PublicPublicationsResponseSchemaDataObjectsStatusLinked:
+		return true
+	case PublicPublicationsResponseSchemaDataObjectsStatusVerified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicPublicationsResponseSchemaDataPublicationType.
+const (
+	PublicPublicationsResponseSchemaDataPublicationTypeNews   PublicPublicationsResponseSchemaDataPublicationType = "news"
+	PublicPublicationsResponseSchemaDataPublicationTypeNotice PublicPublicationsResponseSchemaDataPublicationType = "notice"
+)
+
+// Valid indicates whether the value is a known member of the PublicPublicationsResponseSchemaDataPublicationType enum.
+func (e PublicPublicationsResponseSchemaDataPublicationType) Valid() bool {
+	switch e {
+	case PublicPublicationsResponseSchemaDataPublicationTypeNews:
+		return true
+	case PublicPublicationsResponseSchemaDataPublicationTypeNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationIngestionBatchRequestSchemaItems0ObjectsKind.
+const (
+	PublicationIngestionBatchRequestSchemaItems0ObjectsKindAsset        PublicationIngestionBatchRequestSchemaItems0ObjectsKind = "asset"
+	PublicationIngestionBatchRequestSchemaItems0ObjectsKindBodyHtml     PublicationIngestionBatchRequestSchemaItems0ObjectsKind = "body_html"
+	PublicationIngestionBatchRequestSchemaItems0ObjectsKindBodyMarkdown PublicationIngestionBatchRequestSchemaItems0ObjectsKind = "body_markdown"
+	PublicationIngestionBatchRequestSchemaItems0ObjectsKindMedia        PublicationIngestionBatchRequestSchemaItems0ObjectsKind = "media"
+	PublicationIngestionBatchRequestSchemaItems0ObjectsKindRawPage      PublicationIngestionBatchRequestSchemaItems0ObjectsKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicationIngestionBatchRequestSchemaItems0ObjectsKind enum.
+func (e PublicationIngestionBatchRequestSchemaItems0ObjectsKind) Valid() bool {
+	switch e {
+	case PublicationIngestionBatchRequestSchemaItems0ObjectsKindAsset:
+		return true
+	case PublicationIngestionBatchRequestSchemaItems0ObjectsKindBodyHtml:
+		return true
+	case PublicationIngestionBatchRequestSchemaItems0ObjectsKindBodyMarkdown:
+		return true
+	case PublicationIngestionBatchRequestSchemaItems0ObjectsKindMedia:
+		return true
+	case PublicationIngestionBatchRequestSchemaItems0ObjectsKindRawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationIngestionBatchRequestSchemaItems0PublicationType.
+const (
+	News   PublicationIngestionBatchRequestSchemaItems0PublicationType = "news"
+	Notice PublicationIngestionBatchRequestSchemaItems0PublicationType = "notice"
+	Other  PublicationIngestionBatchRequestSchemaItems0PublicationType = "other"
+)
+
+// Valid indicates whether the value is a known member of the PublicationIngestionBatchRequestSchemaItems0PublicationType enum.
+func (e PublicationIngestionBatchRequestSchemaItems0PublicationType) Valid() bool {
+	switch e {
+	case News:
+		return true
+	case Notice:
+		return true
+	case Other:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationIngestionBatchRequestSchemaItems0Tombstone.
+const (
+	PublicationIngestionBatchRequestSchemaItems0TombstoneFalse PublicationIngestionBatchRequestSchemaItems0Tombstone = false
+)
+
+// Valid indicates whether the value is a known member of the PublicationIngestionBatchRequestSchemaItems0Tombstone enum.
+func (e PublicationIngestionBatchRequestSchemaItems0Tombstone) Valid() bool {
+	switch e {
+	case PublicationIngestionBatchRequestSchemaItems0TombstoneFalse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationIngestionBatchRequestSchemaItems1Tombstone.
+const (
+	PublicationIngestionBatchRequestSchemaItems1TombstoneTrue PublicationIngestionBatchRequestSchemaItems1Tombstone = true
+)
+
+// Valid indicates whether the value is a known member of the PublicationIngestionBatchRequestSchemaItems1Tombstone enum.
+func (e PublicationIngestionBatchRequestSchemaItems1Tombstone) Valid() bool {
+	switch e {
+	case PublicationIngestionBatchRequestSchemaItems1TombstoneTrue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationIngestionBatchRequestSchemaProtocolVersion.
+const (
+	N1 PublicationIngestionBatchRequestSchemaProtocolVersion = "1"
+)
+
+// Valid indicates whether the value is a known member of the PublicationIngestionBatchRequestSchemaProtocolVersion enum.
+func (e PublicationIngestionBatchRequestSchemaProtocolVersion) Valid() bool {
+	switch e {
+	case N1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationIngestionBatchResponseSchemaResultsStatus.
+const (
+	PublicationIngestionBatchResponseSchemaResultsStatusCreated   PublicationIngestionBatchResponseSchemaResultsStatus = "created"
+	PublicationIngestionBatchResponseSchemaResultsStatusRejected  PublicationIngestionBatchResponseSchemaResultsStatus = "rejected"
+	PublicationIngestionBatchResponseSchemaResultsStatusUnchanged PublicationIngestionBatchResponseSchemaResultsStatus = "unchanged"
+	PublicationIngestionBatchResponseSchemaResultsStatusUpdated   PublicationIngestionBatchResponseSchemaResultsStatus = "updated"
+)
+
+// Valid indicates whether the value is a known member of the PublicationIngestionBatchResponseSchemaResultsStatus enum.
+func (e PublicationIngestionBatchResponseSchemaResultsStatus) Valid() bool {
+	switch e {
+	case PublicationIngestionBatchResponseSchemaResultsStatusCreated:
+		return true
+	case PublicationIngestionBatchResponseSchemaResultsStatusRejected:
+		return true
+	case PublicationIngestionBatchResponseSchemaResultsStatusUnchanged:
+		return true
+	case PublicationIngestionBatchResponseSchemaResultsStatusUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationObjectCompleteRequestSchemaKind.
+const (
+	PublicationObjectCompleteRequestSchemaKindAsset        PublicationObjectCompleteRequestSchemaKind = "asset"
+	PublicationObjectCompleteRequestSchemaKindBodyHtml     PublicationObjectCompleteRequestSchemaKind = "body_html"
+	PublicationObjectCompleteRequestSchemaKindBodyMarkdown PublicationObjectCompleteRequestSchemaKind = "body_markdown"
+	PublicationObjectCompleteRequestSchemaKindMedia        PublicationObjectCompleteRequestSchemaKind = "media"
+	PublicationObjectCompleteRequestSchemaKindRawPage      PublicationObjectCompleteRequestSchemaKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicationObjectCompleteRequestSchemaKind enum.
+func (e PublicationObjectCompleteRequestSchemaKind) Valid() bool {
+	switch e {
+	case PublicationObjectCompleteRequestSchemaKindAsset:
+		return true
+	case PublicationObjectCompleteRequestSchemaKindBodyHtml:
+		return true
+	case PublicationObjectCompleteRequestSchemaKindBodyMarkdown:
+		return true
+	case PublicationObjectCompleteRequestSchemaKindMedia:
+		return true
+	case PublicationObjectCompleteRequestSchemaKindRawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationObjectCompleteResponseSchemaKind.
+const (
+	PublicationObjectCompleteResponseSchemaKindAsset        PublicationObjectCompleteResponseSchemaKind = "asset"
+	PublicationObjectCompleteResponseSchemaKindBodyHtml     PublicationObjectCompleteResponseSchemaKind = "body_html"
+	PublicationObjectCompleteResponseSchemaKindBodyMarkdown PublicationObjectCompleteResponseSchemaKind = "body_markdown"
+	PublicationObjectCompleteResponseSchemaKindMedia        PublicationObjectCompleteResponseSchemaKind = "media"
+	PublicationObjectCompleteResponseSchemaKindRawPage      PublicationObjectCompleteResponseSchemaKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicationObjectCompleteResponseSchemaKind enum.
+func (e PublicationObjectCompleteResponseSchemaKind) Valid() bool {
+	switch e {
+	case PublicationObjectCompleteResponseSchemaKindAsset:
+		return true
+	case PublicationObjectCompleteResponseSchemaKindBodyHtml:
+		return true
+	case PublicationObjectCompleteResponseSchemaKindBodyMarkdown:
+		return true
+	case PublicationObjectCompleteResponseSchemaKindMedia:
+		return true
+	case PublicationObjectCompleteResponseSchemaKindRawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationObjectCompleteResponseSchemaStatus.
+const (
+	Linked   PublicationObjectCompleteResponseSchemaStatus = "linked"
+	Verified PublicationObjectCompleteResponseSchemaStatus = "verified"
+)
+
+// Valid indicates whether the value is a known member of the PublicationObjectCompleteResponseSchemaStatus enum.
+func (e PublicationObjectCompleteResponseSchemaStatus) Valid() bool {
+	switch e {
+	case Linked:
+		return true
+	case Verified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationObjectPlanRequestSchemaObjectsKind.
+const (
+	PublicationObjectPlanRequestSchemaObjectsKindAsset        PublicationObjectPlanRequestSchemaObjectsKind = "asset"
+	PublicationObjectPlanRequestSchemaObjectsKindBodyHtml     PublicationObjectPlanRequestSchemaObjectsKind = "body_html"
+	PublicationObjectPlanRequestSchemaObjectsKindBodyMarkdown PublicationObjectPlanRequestSchemaObjectsKind = "body_markdown"
+	PublicationObjectPlanRequestSchemaObjectsKindMedia        PublicationObjectPlanRequestSchemaObjectsKind = "media"
+	PublicationObjectPlanRequestSchemaObjectsKindRawPage      PublicationObjectPlanRequestSchemaObjectsKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicationObjectPlanRequestSchemaObjectsKind enum.
+func (e PublicationObjectPlanRequestSchemaObjectsKind) Valid() bool {
+	switch e {
+	case PublicationObjectPlanRequestSchemaObjectsKindAsset:
+		return true
+	case PublicationObjectPlanRequestSchemaObjectsKindBodyHtml:
+		return true
+	case PublicationObjectPlanRequestSchemaObjectsKindBodyMarkdown:
+		return true
+	case PublicationObjectPlanRequestSchemaObjectsKindMedia:
+		return true
+	case PublicationObjectPlanRequestSchemaObjectsKindRawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationObjectPlanResponseSchemaObjectsKind.
+const (
+	Asset        PublicationObjectPlanResponseSchemaObjectsKind = "asset"
+	BodyHtml     PublicationObjectPlanResponseSchemaObjectsKind = "body_html"
+	BodyMarkdown PublicationObjectPlanResponseSchemaObjectsKind = "body_markdown"
+	Media        PublicationObjectPlanResponseSchemaObjectsKind = "media"
+	RawPage      PublicationObjectPlanResponseSchemaObjectsKind = "raw_page"
+)
+
+// Valid indicates whether the value is a known member of the PublicationObjectPlanResponseSchemaObjectsKind enum.
+func (e PublicationObjectPlanResponseSchemaObjectsKind) Valid() bool {
+	switch e {
+	case Asset:
+		return true
+	case BodyHtml:
+		return true
+	case BodyMarkdown:
+		return true
+	case Media:
+		return true
+	case RawPage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicationObjectPlanResponseSchemaObjectsStatus.
+const (
+	AlreadyPresent PublicationObjectPlanResponseSchemaObjectsStatus = "already_present"
+	UploadRequired PublicationObjectPlanResponseSchemaObjectsStatus = "upload_required"
+)
+
+// Valid indicates whether the value is a known member of the PublicationObjectPlanResponseSchemaObjectsStatus enum.
+func (e PublicationObjectPlanResponseSchemaObjectsStatus) Valid() bool {
+	switch e {
+	case AlreadyPresent:
+		return true
+	case UploadRequired:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TodoBatchDeleteResponseSchemaResults0Success.
 const (
 	TodoBatchDeleteResponseSchemaResults0SuccessTrue TodoBatchDeleteResponseSchemaResults0Success = true
@@ -1289,6 +1688,42 @@ func (e TodosListResponseSchemaTodosPriority) Valid() bool {
 	}
 }
 
+// Defines values for WeatherSnapshotResponseSchemaLocationKey.
+const (
+	WeatherSnapshotResponseSchemaLocationKeyUstcGaoxin WeatherSnapshotResponseSchemaLocationKey = "ustc-gaoxin"
+	WeatherSnapshotResponseSchemaLocationKeyUstcMain   WeatherSnapshotResponseSchemaLocationKey = "ustc-main"
+)
+
+// Valid indicates whether the value is a known member of the WeatherSnapshotResponseSchemaLocationKey enum.
+func (e WeatherSnapshotResponseSchemaLocationKey) Valid() bool {
+	switch e {
+	case WeatherSnapshotResponseSchemaLocationKeyUstcGaoxin:
+		return true
+	case WeatherSnapshotResponseSchemaLocationKeyUstcMain:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeatherSnapshotResponseSchemaProviders.
+const (
+	Amap      WeatherSnapshotResponseSchemaProviders = "amap"
+	OpenMeteo WeatherSnapshotResponseSchemaProviders = "open-meteo"
+)
+
+// Valid indicates whether the value is a known member of the WeatherSnapshotResponseSchemaProviders enum.
+func (e WeatherSnapshotResponseSchemaProviders) Valid() bool {
+	switch e {
+	case Amap:
+		return true
+	case OpenMeteo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceLinkPinBatchRequestSchemaItemsAction.
 const (
 	WorkspaceLinkPinBatchRequestSchemaItemsActionPin   WorkspaceLinkPinBatchRequestSchemaItemsAction = "pin"
@@ -1402,19 +1837,19 @@ func (e ListAdminDescriptionsParamsHasContent) Valid() bool {
 
 // Defines values for ListAdminHomeworksParamsStatus.
 const (
-	ListAdminHomeworksParamsStatusActive  ListAdminHomeworksParamsStatus = "active"
-	ListAdminHomeworksParamsStatusAll     ListAdminHomeworksParamsStatus = "all"
-	ListAdminHomeworksParamsStatusDeleted ListAdminHomeworksParamsStatus = "deleted"
+	Active  ListAdminHomeworksParamsStatus = "active"
+	All     ListAdminHomeworksParamsStatus = "all"
+	Deleted ListAdminHomeworksParamsStatus = "deleted"
 )
 
 // Valid indicates whether the value is a known member of the ListAdminHomeworksParamsStatus enum.
 func (e ListAdminHomeworksParamsStatus) Valid() bool {
 	switch e {
-	case ListAdminHomeworksParamsStatusActive:
+	case Active:
 		return true
-	case ListAdminHomeworksParamsStatusAll:
+	case All:
 		return true
-	case ListAdminHomeworksParamsStatusDeleted:
+	case Deleted:
 		return true
 	default:
 		return false
@@ -1423,9 +1858,10 @@ func (e ListAdminHomeworksParamsStatus) Valid() bool {
 
 // Defines values for CatalogBusDepartureNextParamsDayType.
 const (
-	Auto    CatalogBusDepartureNextParamsDayType = "auto"
-	Weekday CatalogBusDepartureNextParamsDayType = "weekday"
-	Weekend CatalogBusDepartureNextParamsDayType = "weekend"
+	Auto     CatalogBusDepartureNextParamsDayType = "auto"
+	Saturday CatalogBusDepartureNextParamsDayType = "saturday"
+	Sunday   CatalogBusDepartureNextParamsDayType = "sunday"
+	Weekday  CatalogBusDepartureNextParamsDayType = "weekday"
 )
 
 // Valid indicates whether the value is a known member of the CatalogBusDepartureNextParamsDayType enum.
@@ -1433,9 +1869,11 @@ func (e CatalogBusDepartureNextParamsDayType) Valid() bool {
 	switch e {
 	case Auto:
 		return true
-	case Weekday:
+	case Saturday:
 		return true
-	case Weekend:
+	case Sunday:
+		return true
+	case Weekday:
 		return true
 	default:
 		return false
@@ -1706,6 +2144,24 @@ func (e GetTeacherParamsLocale) Valid() bool {
 	case GetTeacherParamsLocaleEnUs:
 		return true
 	case GetTeacherParamsLocaleZhCn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CatalogWeatherGetParamsLocationKey.
+const (
+	CatalogWeatherGetParamsLocationKeyUstcGaoxin CatalogWeatherGetParamsLocationKey = "ustc-gaoxin"
+	CatalogWeatherGetParamsLocationKeyUstcMain   CatalogWeatherGetParamsLocationKey = "ustc-main"
+)
+
+// Valid indicates whether the value is a known member of the CatalogWeatherGetParamsLocationKey enum.
+func (e CatalogWeatherGetParamsLocationKey) Valid() bool {
+	switch e {
+	case CatalogWeatherGetParamsLocationKeyUstcGaoxin:
+		return true
+	case CatalogWeatherGetParamsLocationKeyUstcMain:
 		return true
 	default:
 		return false
@@ -2665,8 +3121,9 @@ type BusRouteSearchResponseSchema struct {
 			NamePrimary   string  `json:"namePrimary"`
 			NameSecondary *string `json:"nameSecondary"`
 		} `json:"originCampus"`
-		StopCount int `json:"stopCount"`
-		Stops     []struct {
+		SaturdayTrips int `json:"saturdayTrips"`
+		StopCount     int `json:"stopCount"`
+		Stops         []struct {
 			Campus struct {
 				Id            int     `json:"id"`
 				Latitude      float32 `json:"latitude"`
@@ -2678,8 +3135,8 @@ type BusRouteSearchResponseSchema struct {
 			} `json:"campus"`
 			StopOrder int `json:"stopOrder"`
 		} `json:"stops"`
+		SundayTrips  int `json:"sundayTrips"`
 		WeekdayTrips int `json:"weekdayTrips"`
-		WeekendTrips int `json:"weekendTrips"`
 	} `json:"routes"`
 	Total int `json:"total"`
 }
@@ -6489,6 +6946,103 @@ type PaginatedTeacherResponseSchema struct {
 	} `json:"pagination"`
 }
 
+// PublicPublicationDetailSchema defines model for publicPublicationDetailSchema.
+type PublicPublicationDetailSchema struct {
+	CanonicalUrl    string                                       `json:"canonicalUrl"`
+	Id              string                                       `json:"id"`
+	PublicationType PublicPublicationDetailSchemaPublicationType `json:"publicationType"`
+	Revision        struct {
+		Author            *string `json:"author"`
+		BodyText          *string `json:"bodyText"`
+		Category          *string `json:"category"`
+		ClassifierVersion *string `json:"classifierVersion"`
+		ExtractionMethod  *string `json:"extractionMethod"`
+		Id                string  `json:"id"`
+		Objects           []struct {
+			AltText     *string                                            `json:"altText"`
+			ContentType string                                             `json:"contentType"`
+			Kind        PublicPublicationDetailSchemaRevisionObjectsKind   `json:"kind"`
+			Sha256      string                                             `json:"sha256"`
+			Size        int                                                `json:"size"`
+			SortOrder   *int                                               `json:"sortOrder"`
+			Status      PublicPublicationDetailSchemaRevisionObjectsStatus `json:"status"`
+			Url         string                                             `json:"url"`
+		} `json:"objects"`
+		ObservedAt      time.Time  `json:"observedAt"`
+		PublishedAt     *time.Time `json:"publishedAt"`
+		RevisionHash    string     `json:"revisionHash"`
+		SourcePageUrl   *string    `json:"sourcePageUrl"`
+		Summary         *string    `json:"summary"`
+		Title           string     `json:"title"`
+		UpdatedAtSource *time.Time `json:"updatedAtSource"`
+	} `json:"revision"`
+	Source struct {
+		Id                string `json:"id"`
+		Name              string `json:"name"`
+		OrganizationLevel string `json:"organizationLevel"`
+	} `json:"source"`
+}
+
+// PublicPublicationDetailSchemaPublicationType defines model for PublicPublicationDetailSchema.PublicationType.
+type PublicPublicationDetailSchemaPublicationType string
+
+// PublicPublicationDetailSchemaRevisionObjectsKind defines model for PublicPublicationDetailSchema.Revision.Objects.Kind.
+type PublicPublicationDetailSchemaRevisionObjectsKind string
+
+// PublicPublicationDetailSchemaRevisionObjectsStatus defines model for PublicPublicationDetailSchema.Revision.Objects.Status.
+type PublicPublicationDetailSchemaRevisionObjectsStatus string
+
+// PublicPublicationsResponseSchema defines model for publicPublicationsResponseSchema.
+type PublicPublicationsResponseSchema struct {
+	Data []struct {
+		CanonicalUrl string `json:"canonicalUrl"`
+		Id           string `json:"id"`
+		Objects      []struct {
+			AltText     *string                                           `json:"altText"`
+			ContentType string                                            `json:"contentType"`
+			Kind        PublicPublicationsResponseSchemaDataObjectsKind   `json:"kind"`
+			Sha256      string                                            `json:"sha256"`
+			Size        int                                               `json:"size"`
+			SortOrder   *int                                              `json:"sortOrder"`
+			Status      PublicPublicationsResponseSchemaDataObjectsStatus `json:"status"`
+			Url         string                                            `json:"url"`
+		} `json:"objects"`
+		PublicationType PublicPublicationsResponseSchemaDataPublicationType `json:"publicationType"`
+		Revision        struct {
+			Author          *string    `json:"author"`
+			Category        *string    `json:"category"`
+			Id              string     `json:"id"`
+			ObservedAt      time.Time  `json:"observedAt"`
+			PublishedAt     *time.Time `json:"publishedAt"`
+			RevisionHash    string     `json:"revisionHash"`
+			SourcePageUrl   *string    `json:"sourcePageUrl"`
+			Summary         *string    `json:"summary"`
+			Title           string     `json:"title"`
+			UpdatedAtSource *time.Time `json:"updatedAtSource"`
+		} `json:"revision"`
+		Source struct {
+			Id                string `json:"id"`
+			Name              string `json:"name"`
+			OrganizationLevel string `json:"organizationLevel"`
+		} `json:"source"`
+	} `json:"data"`
+	Pagination struct {
+		Page       int `json:"page"`
+		PageSize   int `json:"pageSize"`
+		Total      int `json:"total"`
+		TotalPages int `json:"totalPages"`
+	} `json:"pagination"`
+}
+
+// PublicPublicationsResponseSchemaDataObjectsKind defines model for PublicPublicationsResponseSchema.Data.Objects.Kind.
+type PublicPublicationsResponseSchemaDataObjectsKind string
+
+// PublicPublicationsResponseSchemaDataObjectsStatus defines model for PublicPublicationsResponseSchema.Data.Objects.Status.
+type PublicPublicationsResponseSchemaDataObjectsStatus string
+
+// PublicPublicationsResponseSchemaDataPublicationType defines model for PublicPublicationsResponseSchema.Data.PublicationType.
+type PublicPublicationsResponseSchemaDataPublicationType string
+
 // PublicUserProfileResponseSchema defines model for publicUserProfileResponseSchema.
 type PublicUserProfileResponseSchema struct {
 	SectionCount       int `json:"sectionCount"`
@@ -6511,6 +7065,164 @@ type PublicUserProfileResponseSchema struct {
 		Date  string `json:"date"`
 	} `json:"weeks"`
 }
+
+// PublicationIngestionBatchRequestSchema defines model for publicationIngestionBatchRequestSchema.
+type PublicationIngestionBatchRequestSchema struct {
+	BatchId         string                                                `json:"batchId"`
+	ClientRunId     string                                                `json:"clientRunId"`
+	Items           []PublicationIngestionBatchRequestSchema_Items_Item   `json:"items"`
+	ObservedAt      string                                                `json:"observedAt"`
+	ProducerVersion string                                                `json:"producerVersion"`
+	ProtocolVersion PublicationIngestionBatchRequestSchemaProtocolVersion `json:"protocolVersion"`
+	Sources         []struct {
+		Aliases           *[]string `json:"aliases,omitempty"`
+		AllowedHosts      *[]string `json:"allowedHosts,omitempty"`
+		BlockedHosts      *[]string `json:"blockedHosts,omitempty"`
+		DiscoveryOnly     *bool     `json:"discoveryOnly,omitempty"`
+		Id                string    `json:"id"`
+		MaxImagesPerPage  *int      `json:"maxImagesPerPage,omitempty"`
+		Name              string    `json:"name"`
+		OrganizationLevel *string   `json:"organizationLevel,omitempty"`
+		SeedUrls          *[]string `json:"seedUrls,omitempty"`
+	} `json:"sources"`
+}
+
+// PublicationIngestionBatchRequestSchemaItems0 defines model for .
+type PublicationIngestionBatchRequestSchemaItems0 struct {
+	Author            *string `json:"author,omitempty"`
+	BodyText          *string `json:"bodyText,omitempty"`
+	CanonicalUrl      string  `json:"canonicalUrl"`
+	Category          *string `json:"category,omitempty"`
+	ClassifierVersion *string `json:"classifierVersion,omitempty"`
+	ExtractionMethod  *string `json:"extractionMethod,omitempty"`
+	Objects           []struct {
+		AltText     *string                                                 `json:"altText,omitempty"`
+		ContentType string                                                  `json:"contentType"`
+		Kind        PublicationIngestionBatchRequestSchemaItems0ObjectsKind `json:"kind"`
+		Sha256      string                                                  `json:"sha256"`
+		Size        int                                                     `json:"size"`
+		SortOrder   *int                                                    `json:"sortOrder,omitempty"`
+	} `json:"objects"`
+	ObservedAt      string                                                      `json:"observedAt"`
+	PublicationType PublicationIngestionBatchRequestSchemaItems0PublicationType `json:"publicationType"`
+	PublishedAt     *string                                                     `json:"publishedAt,omitempty"`
+	RawMetadata     *map[string]interface{}                                     `json:"rawMetadata,omitempty"`
+	RevisionHash    string                                                      `json:"revisionHash"`
+	SourceId        string                                                      `json:"sourceId"`
+	SourcePageUrl   *string                                                     `json:"sourcePageUrl,omitempty"`
+	Summary         *string                                                     `json:"summary,omitempty"`
+	Title           string                                                      `json:"title"`
+	Tombstone       PublicationIngestionBatchRequestSchemaItems0Tombstone       `json:"tombstone"`
+	UpdatedAtSource *string                                                     `json:"updatedAtSource,omitempty"`
+}
+
+// PublicationIngestionBatchRequestSchemaItems0ObjectsKind defines model for PublicationIngestionBatchRequestSchema.Items.0.Objects.Kind.
+type PublicationIngestionBatchRequestSchemaItems0ObjectsKind string
+
+// PublicationIngestionBatchRequestSchemaItems0PublicationType defines model for PublicationIngestionBatchRequestSchema.Items.0.PublicationType.
+type PublicationIngestionBatchRequestSchemaItems0PublicationType string
+
+// PublicationIngestionBatchRequestSchemaItems0Tombstone defines model for PublicationIngestionBatchRequestSchema.Items.0.Tombstone.
+type PublicationIngestionBatchRequestSchemaItems0Tombstone bool
+
+// PublicationIngestionBatchRequestSchemaItems1 defines model for .
+type PublicationIngestionBatchRequestSchemaItems1 struct {
+	CanonicalUrl string                                                `json:"canonicalUrl"`
+	ObservedAt   string                                                `json:"observedAt"`
+	RevisionHash string                                                `json:"revisionHash"`
+	SourceId     string                                                `json:"sourceId"`
+	Tombstone    PublicationIngestionBatchRequestSchemaItems1Tombstone `json:"tombstone"`
+}
+
+// PublicationIngestionBatchRequestSchemaItems1Tombstone defines model for PublicationIngestionBatchRequestSchema.Items.1.Tombstone.
+type PublicationIngestionBatchRequestSchemaItems1Tombstone bool
+
+// PublicationIngestionBatchRequestSchema_Items_Item defines model for publicationIngestionBatchRequestSchema.items.Item.
+type PublicationIngestionBatchRequestSchema_Items_Item struct {
+	union json.RawMessage
+}
+
+// PublicationIngestionBatchRequestSchemaProtocolVersion defines model for PublicationIngestionBatchRequestSchema.ProtocolVersion.
+type PublicationIngestionBatchRequestSchemaProtocolVersion string
+
+// PublicationIngestionBatchResponseSchema defines model for publicationIngestionBatchResponseSchema.
+type PublicationIngestionBatchResponseSchema struct {
+	BatchId       string `json:"batchId"`
+	ClientRunId   string `json:"clientRunId"`
+	PayloadDigest string `json:"payloadDigest"`
+	Results       []struct {
+		CanonicalUrl  string                                               `json:"canonicalUrl"`
+		Error         *string                                              `json:"error,omitempty"`
+		PublicationId *string                                              `json:"publicationId"`
+		RevisionHash  string                                               `json:"revisionHash"`
+		RevisionId    *string                                              `json:"revisionId"`
+		SourceId      string                                               `json:"sourceId"`
+		Status        PublicationIngestionBatchResponseSchemaResultsStatus `json:"status"`
+	} `json:"results"`
+}
+
+// PublicationIngestionBatchResponseSchemaResultsStatus defines model for PublicationIngestionBatchResponseSchema.Results.Status.
+type PublicationIngestionBatchResponseSchemaResultsStatus string
+
+// PublicationObjectCompleteRequestSchema defines model for publicationObjectCompleteRequestSchema.
+type PublicationObjectCompleteRequestSchema struct {
+	BatchId string                                     `json:"batchId"`
+	Kind    PublicationObjectCompleteRequestSchemaKind `json:"kind"`
+	Sha256  string                                     `json:"sha256"`
+}
+
+// PublicationObjectCompleteRequestSchemaKind defines model for PublicationObjectCompleteRequestSchema.Kind.
+type PublicationObjectCompleteRequestSchemaKind string
+
+// PublicationObjectCompleteResponseSchema defines model for publicationObjectCompleteResponseSchema.
+type PublicationObjectCompleteResponseSchema struct {
+	BatchId string                                        `json:"batchId"`
+	Kind    PublicationObjectCompleteResponseSchemaKind   `json:"kind"`
+	Sha256  string                                        `json:"sha256"`
+	Status  PublicationObjectCompleteResponseSchemaStatus `json:"status"`
+}
+
+// PublicationObjectCompleteResponseSchemaKind defines model for PublicationObjectCompleteResponseSchema.Kind.
+type PublicationObjectCompleteResponseSchemaKind string
+
+// PublicationObjectCompleteResponseSchemaStatus defines model for PublicationObjectCompleteResponseSchema.Status.
+type PublicationObjectCompleteResponseSchemaStatus string
+
+// PublicationObjectPlanRequestSchema defines model for publicationObjectPlanRequestSchema.
+type PublicationObjectPlanRequestSchema struct {
+	BatchId string `json:"batchId"`
+	Objects []struct {
+		Kind   PublicationObjectPlanRequestSchemaObjectsKind `json:"kind"`
+		Sha256 string                                        `json:"sha256"`
+	} `json:"objects"`
+}
+
+// PublicationObjectPlanRequestSchemaObjectsKind defines model for PublicationObjectPlanRequestSchema.Objects.Kind.
+type PublicationObjectPlanRequestSchemaObjectsKind string
+
+// PublicationObjectPlanResponseSchema defines model for publicationObjectPlanResponseSchema.
+type PublicationObjectPlanResponseSchema struct {
+	BatchId string `json:"batchId"`
+	Objects []struct {
+		ExpiresAt       *time.Time                                     `json:"expiresAt"`
+		Kind            PublicationObjectPlanResponseSchemaObjectsKind `json:"kind"`
+		R2Key           string                                         `json:"r2Key"`
+		RequiredHeaders struct {
+			ContentType    string `json:"Content-Type"`
+			XAmzMetaKind   string `json:"x-amz-meta-kind"`
+			XAmzMetaSha256 string `json:"x-amz-meta-sha256"`
+		} `json:"requiredHeaders"`
+		Sha256    string                                           `json:"sha256"`
+		Status    PublicationObjectPlanResponseSchemaObjectsStatus `json:"status"`
+		UploadUrl *string                                          `json:"uploadUrl"`
+	} `json:"objects"`
+}
+
+// PublicationObjectPlanResponseSchemaObjectsKind defines model for PublicationObjectPlanResponseSchema.Objects.Kind.
+type PublicationObjectPlanResponseSchemaObjectsKind string
+
+// PublicationObjectPlanResponseSchemaObjectsStatus defines model for PublicationObjectPlanResponseSchema.Objects.Status.
+type PublicationObjectPlanResponseSchemaObjectsStatus string
 
 // SectionDetailSchema defines model for sectionDetailSchema.
 type SectionDetailSchema struct {
@@ -7475,6 +8187,65 @@ type UploadsListResponseSchema struct {
 	} `json:"pagination"`
 }
 
+// WeatherSnapshotResponseSchema defines model for weatherSnapshotResponseSchema.
+type WeatherSnapshotResponseSchema struct {
+	Alerts []struct {
+		Content  *string    `json:"content,omitempty"`
+		IssuedAt *time.Time `json:"issuedAt,omitempty"`
+		Level    *string    `json:"level,omitempty"`
+		Title    string     `json:"title"`
+	} `json:"alerts"`
+	Current struct {
+		Condition struct {
+			Icon string `json:"icon"`
+			Text string `json:"text"`
+		} `json:"condition"`
+		FeelsLike     *float32 `json:"feelsLike,omitempty"`
+		Humidity      *float32 `json:"humidity,omitempty"`
+		Pressure      *float32 `json:"pressure,omitempty"`
+		Temperature   float32  `json:"temperature"`
+		Visibility    *float32 `json:"visibility,omitempty"`
+		WindDirection *string  `json:"windDirection,omitempty"`
+		WindSpeed     *float32 `json:"windSpeed,omitempty"`
+	} `json:"current"`
+	Daily []struct {
+		Condition *struct {
+			Icon string `json:"icon"`
+			Text string `json:"text"`
+		} `json:"condition,omitempty"`
+		Date            string  `json:"date"`
+		TemperatureHigh float32 `json:"temperatureHigh"`
+		TemperatureLow  float32 `json:"temperatureLow"`
+	} `json:"daily"`
+	Extensions struct {
+		Amap      interface{} `json:"amap,omitempty"`
+		OpenMeteo interface{} `json:"openMeteo,omitempty"`
+	} `json:"extensions"`
+	FetchedAt time.Time `json:"fetchedAt"`
+	Hourly    []struct {
+		At        time.Time `json:"at"`
+		Condition *struct {
+			Icon string `json:"icon"`
+			Text string `json:"text"`
+		} `json:"condition,omitempty"`
+		PrecipitationAmount      *float32 `json:"precipitationAmount,omitempty"`
+		PrecipitationProbability *float32 `json:"precipitationProbability,omitempty"`
+		Temperature              float32  `json:"temperature"`
+	} `json:"hourly"`
+	Location struct {
+		Adcode string                                   `json:"adcode"`
+		Key    WeatherSnapshotResponseSchemaLocationKey `json:"key"`
+		Name   string                                   `json:"name"`
+	} `json:"location"`
+	Providers []WeatherSnapshotResponseSchemaProviders `json:"providers"`
+}
+
+// WeatherSnapshotResponseSchemaLocationKey defines model for WeatherSnapshotResponseSchema.Location.Key.
+type WeatherSnapshotResponseSchemaLocationKey string
+
+// WeatherSnapshotResponseSchemaProviders defines model for WeatherSnapshotResponseSchema.Providers.
+type WeatherSnapshotResponseSchemaProviders string
+
 // WorkspaceLinkPinBatchRequestSchema defines model for workspaceLinkPinBatchRequestSchema.
 type WorkspaceLinkPinBatchRequestSchema struct {
 	Items []struct {
@@ -7772,6 +8543,14 @@ type GetTeacherParams struct {
 
 // GetTeacherParamsLocale defines parameters for GetTeacher.
 type GetTeacherParamsLocale string
+
+// CatalogWeatherGetParams defines parameters for CatalogWeatherGet.
+type CatalogWeatherGetParams struct {
+	LocationKey *CatalogWeatherGetParamsLocationKey `form:"locationKey,omitempty" json:"locationKey,omitempty"`
+}
+
+// CatalogWeatherGetParamsLocationKey defines parameters for CatalogWeatherGet.
+type CatalogWeatherGetParamsLocationKey string
 
 // ListCommentsParams defines parameters for ListComments.
 type ListCommentsParams struct {
@@ -10451,6 +11230,68 @@ func (t *OauthTokenRequestSchema_Resource) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsPublicationIngestionBatchRequestSchemaItems0 returns the union data inside the PublicationIngestionBatchRequestSchema_Items_Item as a PublicationIngestionBatchRequestSchemaItems0
+func (t PublicationIngestionBatchRequestSchema_Items_Item) AsPublicationIngestionBatchRequestSchemaItems0() (PublicationIngestionBatchRequestSchemaItems0, error) {
+	var body PublicationIngestionBatchRequestSchemaItems0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublicationIngestionBatchRequestSchemaItems0 overwrites any union data inside the PublicationIngestionBatchRequestSchema_Items_Item as the provided PublicationIngestionBatchRequestSchemaItems0
+func (t *PublicationIngestionBatchRequestSchema_Items_Item) FromPublicationIngestionBatchRequestSchemaItems0(v PublicationIngestionBatchRequestSchemaItems0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublicationIngestionBatchRequestSchemaItems0 performs a merge with any union data inside the PublicationIngestionBatchRequestSchema_Items_Item, using the provided PublicationIngestionBatchRequestSchemaItems0
+func (t *PublicationIngestionBatchRequestSchema_Items_Item) MergePublicationIngestionBatchRequestSchemaItems0(v PublicationIngestionBatchRequestSchemaItems0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsPublicationIngestionBatchRequestSchemaItems1 returns the union data inside the PublicationIngestionBatchRequestSchema_Items_Item as a PublicationIngestionBatchRequestSchemaItems1
+func (t PublicationIngestionBatchRequestSchema_Items_Item) AsPublicationIngestionBatchRequestSchemaItems1() (PublicationIngestionBatchRequestSchemaItems1, error) {
+	var body PublicationIngestionBatchRequestSchemaItems1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPublicationIngestionBatchRequestSchemaItems1 overwrites any union data inside the PublicationIngestionBatchRequestSchema_Items_Item as the provided PublicationIngestionBatchRequestSchemaItems1
+func (t *PublicationIngestionBatchRequestSchema_Items_Item) FromPublicationIngestionBatchRequestSchemaItems1(v PublicationIngestionBatchRequestSchemaItems1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePublicationIngestionBatchRequestSchemaItems1 performs a merge with any union data inside the PublicationIngestionBatchRequestSchema_Items_Item, using the provided PublicationIngestionBatchRequestSchemaItems1
+func (t *PublicationIngestionBatchRequestSchema_Items_Item) MergePublicationIngestionBatchRequestSchemaItems1(v PublicationIngestionBatchRequestSchemaItems1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PublicationIngestionBatchRequestSchema_Items_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PublicationIngestionBatchRequestSchema_Items_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsTodoBatchDeleteResponseSchemaResults0 returns the union data inside the TodoBatchDeleteResponseSchema_Results_Item as a TodoBatchDeleteResponseSchemaResults0
 func (t TodoBatchDeleteResponseSchema_Results_Item) AsTodoBatchDeleteResponseSchemaResults0() (TodoBatchDeleteResponseSchemaResults0, error) {
 	var body TodoBatchDeleteResponseSchemaResults0
@@ -10950,6 +11791,9 @@ type ClientInterface interface {
 
 	// GetTeacher request
 	GetTeacher(ctx context.Context, id int64, params *GetTeacherParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CatalogWeatherGet request
+	CatalogWeatherGet(ctx context.Context, params *CatalogWeatherGetParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListComments request
 	ListComments(ctx context.Context, params *ListCommentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -11631,6 +12475,18 @@ func (c *Client) ListTeachers(ctx context.Context, params *ListTeachersParams, r
 
 func (c *Client) GetTeacher(ctx context.Context, id int64, params *GetTeacherParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetTeacherRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CatalogWeatherGet(ctx context.Context, params *CatalogWeatherGetParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCatalogWeatherGetRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -15228,6 +16084,55 @@ func NewGetTeacherRequest(server string, id int64, params *GetTeacherParams) (*h
 	return req, nil
 }
 
+// NewCatalogWeatherGetRequest generates requests for CatalogWeatherGet
+func NewCatalogWeatherGetRequest(server string, params *CatalogWeatherGetParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/weather")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.LocationKey != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "locationKey", *params.LocationKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListCommentsRequest generates requests for ListComments
 func NewListCommentsRequest(server string, params *ListCommentsParams) (*http.Request, error) {
 	var err error
@@ -17990,6 +18895,9 @@ type ClientWithResponsesInterface interface {
 	// GetTeacherWithResponse request
 	GetTeacherWithResponse(ctx context.Context, id int64, params *GetTeacherParams, reqEditors ...RequestEditorFn) (*GetTeacherResponse, error)
 
+	// CatalogWeatherGetWithResponse request
+	CatalogWeatherGetWithResponse(ctx context.Context, params *CatalogWeatherGetParams, reqEditors ...RequestEditorFn) (*CatalogWeatherGetResponse, error)
+
 	// ListCommentsWithResponse request
 	ListCommentsWithResponse(ctx context.Context, params *ListCommentsParams, reqEditors ...RequestEditorFn) (*ListCommentsResponse, error)
 
@@ -19025,6 +19933,29 @@ func (r GetTeacherResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetTeacherResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CatalogWeatherGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *WeatherSnapshotResponseSchema
+	JSON400      *OpenApiErrorSchema
+}
+
+// Status returns HTTPResponse.Status
+func (r CatalogWeatherGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CatalogWeatherGetResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -20658,6 +21589,15 @@ func (c *ClientWithResponses) GetTeacherWithResponse(ctx context.Context, id int
 		return nil, err
 	}
 	return ParseGetTeacherResponse(rsp)
+}
+
+// CatalogWeatherGetWithResponse request returning *CatalogWeatherGetResponse
+func (c *ClientWithResponses) CatalogWeatherGetWithResponse(ctx context.Context, params *CatalogWeatherGetParams, reqEditors ...RequestEditorFn) (*CatalogWeatherGetResponse, error) {
+	rsp, err := c.CatalogWeatherGet(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCatalogWeatherGetResponse(rsp)
 }
 
 // ListCommentsWithResponse request returning *ListCommentsResponse
@@ -22713,6 +23653,39 @@ func ParseGetTeacherResponse(rsp *http.Response) (*GetTeacherResponse, error) {
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCatalogWeatherGetResponse parses an HTTP response from a CatalogWeatherGetWithResponse call
+func ParseCatalogWeatherGetResponse(rsp *http.Response) (*CatalogWeatherGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CatalogWeatherGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest WeatherSnapshotResponseSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest OpenApiErrorSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
